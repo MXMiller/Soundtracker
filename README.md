@@ -57,14 +57,17 @@ An app for developing your own soundtracks or organizing and disecting other sou
 - Users can search for and view other users public and open projects, similar to a wiki page. 
 
 ### Database design:
-- Table of users with their info
-- Table of soundtracks with their info and foreign keys to things, leitmotifs, and track list tables
-  - Table of things in the story with a name, type, etc.
-  - Table of leitmotifs wit their information. 
-  - Table of songs with their information. 
+- PostgreSQL schema: [`soundtracker-schema.sql`](soundtracker-schema.sql), designed for Supabase.
+- Supabase Auth manages passwords and sign-in. Each `profiles` row uses the matching Auth user UUID and stores the user's username, email, profile image file path, and description.
+- `soundtracks` stores each soundtrack's owner, name, description, listening link, visibility, and created/modified timestamps. `soundtrack_composers` supports multiple composers per soundtrack.
+- `soundtrack_access` grants selected users view or edit access. Visibility is `open`, `public`, or `private`; the app's access rules determine who can view, edit, or delete each soundtrack.
+- `soundtrack_favorites` records users' favorite soundtracks.
+- `story_items` stores characters, settings, ideas, and other story concepts. `instruments` and `story_item_instruments` associate instruments with story items.
+- `leitmotifs` stores motif details and an optional notation file path or external link. `story_item_leitmotifs` connects motifs to story items, and `leitmotif_derivations` records motifs derived from other motifs.
+- `tracks` stores the soundtrack tracklist, including optional track numbers, listening links, and audio file paths. `track_composers` supports multiple composers per track; `track_leitmotifs` records motifs and where they appear in the track or story.
+- Images, notation files, and audio files belong in Supabase Storage; the database stores their file paths. The schema defines relationships and constraints; Row Level Security policies still need to be added to enforce access rules for database requests.
 
 ### Tools used: 
-- Supabase and magic links for authentication?
-- BigQuery for database and storage?
-- Object oriented development. 
-- Maybe have an online web-app version and a local offline version.
+- React for frontend. 
+- PostgreSQL and Supabase backend for authentication and storage. 
+- Cloudflare for web hosting. 
