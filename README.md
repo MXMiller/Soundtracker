@@ -1,5 +1,5 @@
 # Soundtracker
-An app for developing your own soundtracks or organizing other soundtracks. 
+An app for developing your own soundtracks or organizing and disecting other soundtracks. 
 
 ### Users have:
 - Username
