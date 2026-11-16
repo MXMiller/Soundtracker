@@ -35,7 +35,7 @@ An app for developing your own soundtracks or organizing and disecting other sou
 - `story_items` stores characters, settings, ideas, and other story concepts. `instruments` and `story_item_instruments` associate instruments with story items.
 - `leitmotifs` stores motif details and an optional notation file path or external link. `story_item_leitmotifs` connects motifs to story items, and `leitmotif_derivations` records motifs derived from other motifs.
 - `tracks` stores the soundtrack tracklist, including optional track numbers, listening links, and audio file paths. `track_composers` supports multiple composers per track; `track_leitmotifs` records motifs and where they appear in the track or story.
-- Images, notation files, and audio files belong in Supabase Storage; the database stores their file paths. The schema defines relationships and constraints; Row Level Security policies still need to be added to enforce access rules for database requests.
+- Images and notation files belong in Supabase Storage; the database stores their file paths. The schema defines relationships and constraints; Row Level Security policies still need to be added to enforce access rules for database requests. (Audio file storage can be added if I pay for a much higher storage limit.)
 
 ### Tools used: 
 - React for frontend. 
