@@ -1,51 +1,21 @@
 # Soundtracker
 An app for developing your own soundtracks or organizing and disecting other soundtracks. 
 
-### Users have:
-- Username
-- Email
-- Password
-- pfp (optional)
-- Description (optional)
-- Their soundtracks
-- Other soundtracks shared with them
-- Favorite soundtracks by other users
+### Users
+- Users sign in through Supabase Auth, which manages their password and authentication.
+- Each user has a username, email, optional profile picture, and optional description.
+- Users can create their own soundtracks, access soundtracks shared with them, and favorite soundtracks by other users.
 
-### Soundtracks will have: 
-- Name
-- Composer(s)
-- Description (optional)
-- Link to soundtrack on a listening platform (optional)
-- Two view modes: 
-  - Story view: List of characters/settings/ideas in the story etc. Each has: 
-    - Name
-    - Description (optional)
-    - A picture (optional)
-    - Associated leitmotifs (optional)
-    - Associated instruments (optional)
-    - Associated key (optional)
-    - Associated tracks (optional)
-  - Leitmotif view: List of leitmotifs. Each has: 
-    - Name
-    - Description (optional)
-    - A visual representation of the leitmotif like sheet music or midi (optional)
-    - Associated characters/settings/ideas (optional)
-    - List of leitmotif's derived from it (optional)
-- Tracklist. Each track has: 
-  - Name
-  - Composer(s) for each track
-  - Description (optional)
-  - List of leitmotifs in the track
-  - Where they appear in the track (optional)
-  - Where they appear in the film/tv show/game/musical/etc. (optional)
-  - Link to the track on some listening platform (optional)
-  - Maybe an audio file of the track? depends how much storage that would take (optional)
-- Date created
-- Date modified
-- Visibility (open/public/private)
-  - Open soundtracks are visible and editable by other users. Only the original user can delete the soundtrack. 
-  - Public soundtracks are visible to other users, but only editable by the original user. 
-  - Private soundtracks are only visible and editable by the original user. The original user can give specific users access with either editing or viewing permissions. 
+### Soundtracks
+- Each soundtrack has a name, one or more composers, an optional description, and an optional listening-platform link.
+- **Story view** organizes characters, settings, ideas, and other story items. Each item can have a name, optional description and picture, and associations with leitmotifs, instruments, key signatures, and tracks.
+- **Leitmotif view** lists motifs with a name, optional description and sheet music or MIDI representation. Motifs can be associated with story items and derived from other motifs.
+- **Tracklist** contains tracks with a name, one or more composers, optional description, and optional listening link or audio file. Tracks can list leitmotifs and where each appears in the track and in the film, show, game, or other work.
+- Soundtracks record their creation and modification dates.
+- **Visibility and access:**
+  - **Open:** Other users can view and edit the soundtrack; only its owner can delete it.
+  - **Public:** Other users can view it; only its owner can edit or delete it.
+  - **Private:** Only its owner can view and edit it unless the owner grants specific users view or edit access. Only the owner can delete it.
 
 #### Other features: 
 - All characters, settings, ideas, leitmotifs, etc. have their own subpages which show extra info like the full description.
