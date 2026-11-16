@@ -38,6 +38,7 @@ An app for developing your own soundtracks or organizing and disecting other sou
 - Images and notation files belong in Supabase Storage; the database stores their file paths. The schema defines relationships and constraints; Row Level Security policies still need to be added to enforce access rules for database requests. (Audio file storage can be added if I pay for a much higher storage limit.)
 
 ### Tools used: 
-- React for frontend. 
+- Typescript and React for frontend. 
+- Vite to build and deploy. 
 - PostgreSQL and Supabase for backend authentication and storage. 
 - Cloudflare Pages for web hosting. 
