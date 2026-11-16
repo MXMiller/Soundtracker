@@ -55,8 +55,15 @@ An app for developing your own soundtracks or organizing and disecting other sou
 - Soundtracks and can be exported as a .pdf, .md, or .txt file. 
 - Users can search for and view other users public and open projects, similar to a wiki page. 
 
-### Database design: 
+### Database design:
+- Table of users with their info
+- Table of soundtracks with their info and foreign keys to things, leitmotifs, and track list tables
+  - Table of things in the story with a name, type, etc.
+  - Table of leitmotifs wit their information. 
+  - Table of songs with their information. 
+
+### Tools used: 
 - Supabase and magic links for authentication?
 - BigQuery for database and storage?
 - Object oriented development. 
-- Maybe have an online web-app version and a local offline version. 
+- Maybe have an online web-app version and a local offline version.
