@@ -23,7 +23,7 @@ An app for developing your own soundtracks or organizing and disecting other sou
   - Create button creates a new page and opens it in edit mode. The different name, description, etc. fields have default descriptive text.
   - Edit button shows the current page in edit mode. User has to confirm changes. 
   - Delete button prompts the user for confirmation before deleting. 
-- Soundtracks and can be exported as a .pdf, .md, or .txt file. 
+- Soundtracks and can be exported as a .md file. 
 - Users can search for and view other users public and open projects, similar to a wiki page. 
 
 ### Database design:
@@ -39,5 +39,5 @@ An app for developing your own soundtracks or organizing and disecting other sou
 
 ### Tools used: 
 - React for frontend. 
-- PostgreSQL and Supabase backend for authentication and storage. 
-- Cloudflare for web hosting. 
+- PostgreSQL and Supabase for backend authentication and storage. 
+- Cloudflare Pages for web hosting. 
