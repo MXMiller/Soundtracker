@@ -23,13 +23,14 @@ An app for developing your own soundtracks or organizing and disecting other sou
     - A picture (optional)
     - Associated leitmotifs (optional)
     - Associated instruments (optional)
-    - Tracks related to them (optional)
+    - Associated key (optional)
+    - Associated tracks (optional)
   - Leitmotif view: List of leitmotifs. Each has: 
     - Name
     - Description (optional)
     - A visual representation of the leitmotif like sheet music or midi (optional)
-    - Assocaited characters/settings/ideas
-    - List of leitmotif's derived from it
+    - Associated characters/settings/ideas (optional)
+    - List of leitmotif's derived from it (optional)
 - Tracklist. Each track has: 
   - Name
   - Composer(s) for each track
