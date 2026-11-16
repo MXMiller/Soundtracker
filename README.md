@@ -1,25 +1,21 @@
 # Soundtracker
-An app for organizing soundtracks and leitmotifs. 
+An app for developing your own soundtracks or organizing other soundtracks. 
 
-Users have:
+### Users have:
 - Username
-- email
+- Email
 - Password
+- pfp (optional)
 - Description (optional)
-- Projects
+- Their soundtracks
+- Other soundtracks shared with them
+- Favorite soundtracks by other users
 
-Projects have:
-- Name
-- Soundtrack
-- User/owner
-- Description (optional)
-- Creation date
-- Visibility (public/private)
-
-Soundtracks will have:
+### Soundtracks will have: 
 - Name
 - Composer(s)
 - Description (optional)
+- Link to soundtrack on a listening platform (optional)
 - Two view modes: 
   - Story view: List of characters/settings/ideas in the story etc. Each has: 
     - Name
@@ -34,22 +30,33 @@ Soundtracks will have:
     - A visual representation of the leitmotif like sheet music or midi (optional)
     - Assocaited characters/settings/ideas
     - List of leitmotif's derived from it
-   - All characters, settings, ideas, leitmotifs, etc. have their own page that shows extra info
-- Track list. Each track has:
+- Tracklist. Each track has: 
   - Name
-  - Composer(s)
+  - Composer(s) for each track
   - Description (optional)
   - List of leitmotifs in the track
   - Where they appear in the track (optional)
   - Where they appear in the film/tv show/game/musical/etc. (optional)
-- Notes
+  - Link to the track on some listening platform (optional)
+  - Maybe an audio file of the track? depends how much storage that would take (optional)
+- Date created
+- Date modified
+- Visibility (open/public/private)
+  - Open soundtracks are visible and editable by other users. Only the original user can delete the soundtrack. 
+  - Public soundtracks are visible to other users, but only editable by the original user. 
+  - Private soundtracks are only visible and editable by the original user. The original user can give specific users access with either editing or viewing permissions. 
 
-Database design: 
-- Each soundtrack has its own table of all the songs in it. 
-- Each song has an id, name, song type (song or score), an audio file or link to the song (some way to listen to it), and a table of motifs in this track/connections to other songs with optional timestamps. 
-- Each leitmotif has a name, description, visualization of the motif (sheet music or midi), optional motifs derived from it, and a table of songs containing it. 
-- Each idea/character has a table of songs and motifs related to it. 
-- You can visualize it either as a list of ideas or characters and the motifs, instruments, keys related to them, or as a list of motifs and what they mean and where they appear.
+#### Other features: 
+- All characters, settings, ideas, leitmotifs, etc. have their own subpages which show extra info like the full description.
+- Each page and subpage has a create, edit, and delete button for users with the right permissions.
+  - Create button creates a new page and opens it in edit mode. The different name, description, etc. fields have default descriptive text.
+  - Edit button shows the current page in edit mode. User has to confirm changes. 
+  - Delete button prompts the user for confirmation before deleting. 
+- Soundtracks and can be exported as a .pdf, .md, or .txt file. 
+- Users can search for and view other users public and open projects, similar to a wiki page. 
 
-Services used: 
-- Supabase or BigQuery
+### Database design: 
+- Supabase and magic links for authentication?
+- BigQuery for database and storage?
+- Object oriented development. 
+- Maybe have an online web-app version and a local offline version. 
