@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { isValidElement, useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowRight,
   AudioLines,
@@ -12,6 +12,7 @@ import {
   MoreHorizontal,
   Plus,
   Share2,
+  Trash2,
   Upload,
   X,
 } from "lucide-react";
@@ -24,11 +25,18 @@ import type {
   SoundtrackSection,
   StoryItem,
   StoryType,
+  Track,
+  TrackMotifAppearance,
   Visibility,
   ViewPage,
 } from "./types";
 import AppPageRouter from "./pages/AppPageRouter";
-import { STORE_KEY, loadData, parseMarkdown } from "./utils";
+import {
+  STORE_KEY,
+  getTrackMotifAppearances,
+  loadData,
+  parseMarkdown,
+} from "./utils";
 
 type Section = SoundtrackSection;
 type Page = ViewPage;
@@ -36,6 +44,7 @@ type Modal = ModalType;
 type Entity = SoundtrackEntity;
 type BreadcrumbItem = {
   label: string;
+  nameColor?: string;
   kind: string;
   target: "workspace" | "soundtrack" | "section" | "history" | "current";
   section?: Section;
@@ -75,6 +84,10 @@ function App() {
   const [entitySoundtrackId, setEntitySoundtrackId] = useState<string | null>(null);
   const [editing, setEditing] = useState<Entity | Soundtrack | null>(null);
   const [detail, setDetail] = useState<Entity | null>(null);
+  const [appearanceEditor, setAppearanceEditor] = useState<{
+    trackId: string;
+    motifId: string;
+  } | null>(null);
   const [detailHistory, setDetailHistory] = useState<
     { entity: Entity; section: Section }[]
   >([]);
@@ -124,12 +137,34 @@ function App() {
   }, [createdItemNotice]);
 
   const active = soundtracks.find((item) => item.id === activeId) || null;
+  const appearanceTrack = appearanceEditor
+    ? soundtracks
+        .find((item) =>
+          item.tracks.some((track) => track.id === appearanceEditor.trackId),
+        )
+        ?.tracks.find((track) => track.id === appearanceEditor.trackId)
+    : undefined;
+  const appearanceSoundtrack = appearanceEditor
+    ? soundtracks.find((item) =>
+        item.tracks.some((track) => track.id === appearanceEditor.trackId),
+      )
+    : undefined;
+  const appearanceMotif = appearanceSoundtrack?.leitmotifs.find(
+    (motif) => motif.id === appearanceEditor?.motifId,
+  );
+  const appearanceConnection = appearanceTrack?.motifAppearances.find(
+    (appearance) => appearance.leitmotifId === appearanceEditor?.motifId,
+  );
+  const appearanceValues = appearanceConnection
+    ? getTrackMotifAppearances(appearanceConnection)
+    : [];
   const breadcrumbItems: BreadcrumbItem[] = [
     { label: "Workspace", kind: "workspace", target: "workspace" },
   ];
   if (active) {
     breadcrumbItems.push({
       label: active.name,
+      nameColor: active.nameColor,
       kind: "soundtrack",
       target: "soundtrack",
     });
@@ -153,6 +188,7 @@ function App() {
         }
         breadcrumbItems.push({
           label: entry.entity.name,
+          nameColor: entry.entity.nameColor,
           kind: "history",
           target: "history",
           historyIndex: index,
@@ -167,7 +203,7 @@ function App() {
           section,
         });
       }
-      breadcrumbItems.push({ label: detail.name, kind: "current", target: "current" });
+      breadcrumbItems.push({ label: detail.name, nameColor: detail.nameColor, kind: "current", target: "current" });
     } else {
       breadcrumbItems.push({
         label: sectionTitle(section),
@@ -319,6 +355,7 @@ function App() {
     setModal(null);
     setEntitySoundtrackId(null);
     if (editing) {
+      if (detail?.id === entity.id) setDetail(entity);
       showToast("Changes saved");
     } else {
       setToast("");
@@ -328,6 +365,46 @@ function App() {
         soundtrackName: target.name,
       });
     }
+  }
+  function saveTrackMotifAppearance(
+    trackId: string,
+    motifId: string,
+    appearances: TrackMotifAppearance[],
+  ) {
+    const soundtrack = soundtracks.find((item) =>
+      item.tracks.some((track) => track.id === trackId),
+    );
+    const track = soundtrack?.tracks.find((item) => item.id === trackId);
+    if (!soundtrack || !track) return;
+
+    const updatedTrack: Track = {
+      ...track,
+      motifAppearances: track.motifAppearances.map((appearance) =>
+        appearance.leitmotifId === motifId
+          ? { leitmotifId: motifId, appearances }
+          : appearance,
+      ),
+    };
+    setSoundtracks((all) =>
+      all.map((item) =>
+        item.id === soundtrack.id
+          ? {
+              ...item,
+              updatedAt: new Date().toISOString(),
+              tracks: item.tracks.map((current) =>
+                current.id === trackId ? updatedTrack : current,
+              ),
+            }
+          : item,
+      ),
+    );
+    setDetail((current) =>
+      current && "motifAppearances" in current && current.id === trackId
+        ? updatedTrack
+        : current,
+    );
+    setAppearanceEditor(null);
+    showToast("Leitmotif details saved");
   }
   function deleteEntity(kind: Section, id: string) {
     if (!active || !window.confirm("Delete this page? This cannot be undone."))
@@ -521,7 +598,7 @@ function App() {
           <span className="brand-mark">
             <AudioLines size={19} />
           </span>
-          <span>soundtracker</span>
+          <span>Soundtracker</span>
           <button
             className="mobile-close icon-button"
             onClick={() => setMobileNav(false)}
@@ -618,10 +695,11 @@ function App() {
                 <span className="breadcrumb-entry" key={`${item.kind}-${index}`}>
                   {index > 0 && <ChevronRight size={14} />}
                   {isCurrent ? (
-                    <strong className={`breadcrumb-${item.kind}`}>{item.label}</strong>
+                    <strong className={`breadcrumb-${item.kind}`} style={{ color: item.nameColor }}>{item.label}</strong>
                   ) : (
                     <button
                       className={`breadcrumb-${item.kind} breadcrumb-button`}
+                      style={{ color: item.nameColor }}
                       onClick={() => navigateBreadcrumb(item)}
                       title={`Go to ${item.label}`}
                     >
@@ -680,6 +758,11 @@ function App() {
           onOpenEntity={openEntity}
           onNavigateEntity={followEntityLink}
           onEditEntity={editCurrentEntity}
+          onEditTrackMotif={(motifId) => {
+            if (detail && "motifAppearances" in detail) {
+              setAppearanceEditor({ trackId: detail.id, motifId });
+            }
+          }}
           onDeleteEntity={deleteEntity}
           onAddEntity={(entitySection) =>
             openModal(
@@ -719,6 +802,23 @@ function App() {
           }}
         />
       )}
+      {appearanceEditor && appearanceTrack && appearanceMotif && (
+        <TrackMotifAppearanceEditor
+          trackName={appearanceTrack.name}
+          trackNameColor={appearanceTrack.nameColor}
+          motifName={appearanceMotif.name}
+          motifNameColor={appearanceMotif.nameColor}
+          initialAppearances={appearanceValues}
+          onClose={() => setAppearanceEditor(null)}
+          onSave={(values) =>
+            saveTrackMotifAppearance(
+              appearanceEditor.trackId,
+              appearanceEditor.motifId,
+              values,
+            )
+          }
+        />
+      )}
       {showCreateItemPicker && (
         <CreateItemPicker
           soundtracks={soundtracks.filter(canEdit)}
@@ -737,7 +837,7 @@ function App() {
           <button className="toast-action-link" onClick={openCreatedItem}>
             <Check size={16} />
             <span>
-              <strong>{createdItemNotice.entity.name}</strong>
+              <strong style={{ color: createdItemNotice.entity.nameColor }}>{createdItemNotice.entity.name}</strong>
               <small>Created in {createdItemNotice.soundtrackName} · Open page</small>
             </span>
             <ArrowRight size={16} />
@@ -796,7 +896,7 @@ function CreateItemPicker({
                 <span>Soundtrack</span>
                 <select value={selectedId} onChange={(event) => onSelect(event.target.value)}>
                   {soundtracks.map((soundtrack) => (
-                    <option key={soundtrack.id} value={soundtrack.id}>
+                    <option key={soundtrack.id} value={soundtrack.id} style={{ color: soundtrack.nameColor }}>
                       {soundtrack.name}
                     </option>
                   ))}
@@ -865,6 +965,9 @@ function ModalView({
       ? (editing as Soundtrack)
       : null;
   const [name, setName] = useState(soundtrackEditing?.name || "");
+  const [nameColor, setNameColor] = useState(
+    (editing && "nameColor" in editing ? editing.nameColor : "") || "",
+  );
   const [composers, setComposers] = useState(
     soundtrackEditing?.composers.join(", ") || "",
   );
@@ -935,16 +1038,6 @@ function ModalView({
   const [derivedFrom, setDerivedFrom] = useState<string[]>(
     editing && "derivedFromIds" in editing ? editing.derivedFromIds : [],
   );
-  const [appearanceTrack, setAppearanceTrack] = useState(
-    editing && "motifAppearances" in editing
-      ? editing.motifAppearances[0]?.appearanceInTrack || ""
-      : "",
-  );
-  const [appearanceStory, setAppearanceStory] = useState(
-    editing && "motifAppearances" in editing
-      ? editing.motifAppearances[0]?.appearanceInStory || ""
-      : "",
-  );
   const [grantUsers, setGrantUsers] = useState<Record<string, "view" | "edit">>(
     active?.collaborators || {},
   );
@@ -960,6 +1053,7 @@ function ModalView({
       }
       onSaveSoundtrack({
         name: name.trim(),
+        nameColor: nameColor || undefined,
         composers: composers
           .split(",")
           .map((x) => x.trim())
@@ -1001,6 +1095,7 @@ function ModalView({
     if (modal === "story")
       onSaveEntity("story", {
         name: entityName.trim(),
+        nameColor: nameColor || undefined,
         description: entityDescription,
         type: entityType,
         musicalKey,
@@ -1015,6 +1110,7 @@ function ModalView({
     if (modal === "motif")
       onSaveEntity("motif", {
         name: entityName.trim(),
+        nameColor: nameColor || undefined,
         description: entityDescription,
         notationUrl,
         storyItemIds: selectedStories,
@@ -1023,6 +1119,7 @@ function ModalView({
     if (modal === "track")
       onSaveEntity("track", {
         name: entityName.trim(),
+        nameColor: nameColor || undefined,
         description: entityDescription,
         trackNumber: trackNumber ? Number(trackNumber) : null,
         composers: trackComposers
@@ -1030,11 +1127,20 @@ function ModalView({
           .map((x) => x.trim())
           .filter(Boolean),
         listeningUrl: trackLink,
-        motifAppearances: selectedMotifs.map((id) => ({
-          leitmotifId: id,
-          appearanceInTrack: appearanceTrack,
-          appearanceInStory: appearanceStory,
-        })),
+        motifAppearances: selectedMotifs.map((id) => {
+          const existing =
+            editing && "motifAppearances" in editing
+              ? editing.motifAppearances.find(
+                  (appearance) => appearance.leitmotifId === id,
+                )
+              : undefined;
+          return (
+            existing || {
+              leitmotifId: id,
+              appearances: [],
+            }
+          );
+        }),
       });
   };
   const title =
@@ -1086,6 +1192,9 @@ function ModalView({
                   placeholder="e.g. Test Soundtrack"
                 />
               </Field>
+              <Field label="Name color">
+                <input type="color" value={nameColor || "#222222"} onChange={(e) => setNameColor(e.target.value)} />
+              </Field>
               <Field label="Composer(s)" hint="Separate names with commas">
                 <input
                   value={composers}
@@ -1133,6 +1242,9 @@ function ModalView({
                   placeholder="e.g. Character 1"
                 />
               </Field>
+              <Field label="Name color">
+                <input type="color" value={nameColor || "#222222"} onChange={(e) => setNameColor(e.target.value)} />
+              </Field>
               <Field label="Type">
                 <select
                   value={entityType}
@@ -1170,9 +1282,11 @@ function ModalView({
               <Field label="Associated leitmotifs">
                 {active?.leitmotifs.length ? (
                   <CheckList
+                    className="associated-check-list"
                     items={active.leitmotifs.map((x) => ({
                       id: x.id,
                       name: x.name,
+                      nameColor: x.nameColor,
                     }))}
                     selected={selectedMotifs}
                     onChange={setSelectedMotifs}
@@ -1186,9 +1300,11 @@ function ModalView({
               <Field label="Associated tracks">
                 {active?.tracks.length ? (
                   <CheckList
+                    className="associated-check-list"
                     items={active.tracks.map((x) => ({
                       id: x.id,
                       name: x.name,
+                      nameColor: x.nameColor,
                     }))}
                     selected={selectedTracks}
                     onChange={setSelectedTracks}
@@ -1210,6 +1326,9 @@ function ModalView({
                   onChange={(e) => setEntityName(e.target.value)}
                     placeholder="e.g. Placeholder Leitmotif"
                 />
+              </Field>
+              <Field label="Name color">
+                <input type="color" value={nameColor || "#222222"} onChange={(e) => setNameColor(e.target.value)} />
               </Field>
               <Field label="Description">
                 <textarea
@@ -1233,6 +1352,7 @@ function ModalView({
                     items={active.storyItems.map((x) => ({
                       id: x.id,
                       name: x.name,
+                      nameColor: x.nameColor,
                     }))}
                     selected={selectedStories}
                     onChange={setSelectedStories}
@@ -1250,7 +1370,7 @@ function ModalView({
                   <CheckList
                     items={active.leitmotifs
                       .filter((m) => !editing || m.id !== editing.id)
-                      .map((x) => ({ id: x.id, name: x.name }))}
+                      .map((x) => ({ id: x.id, name: x.name, nameColor: x.nameColor }))}
                     selected={derivedFrom}
                     onChange={setDerivedFrom}
                   />
@@ -1271,6 +1391,9 @@ function ModalView({
                   onChange={(e) => setEntityName(e.target.value)}
                   placeholder="e.g. Example Track"
                 />
+              </Field>
+              <Field label="Name color">
+                <input type="color" value={nameColor || "#222222"} onChange={(e) => setNameColor(e.target.value)} />
               </Field>
               <div className="form-row">
                 <Field label="Track number">
@@ -1312,6 +1435,7 @@ function ModalView({
                     items={active.leitmotifs.map((x) => ({
                       id: x.id,
                       name: x.name,
+                      nameColor: x.nameColor,
                     }))}
                     selected={selectedMotifs}
                     onChange={setSelectedMotifs}
@@ -1322,24 +1446,6 @@ function ModalView({
                   </p>
                 )}
               </Field>
-              {selectedMotifs.length > 0 && (
-                <div className="form-row">
-                  <Field label="Where in the track?">
-                    <input
-                      value={appearanceTrack}
-                      onChange={(e) => setAppearanceTrack(e.target.value)}
-                      placeholder="e.g. 1:24, strings enter"
-                    />
-                  </Field>
-                  <Field label="Where in the story?">
-                    <input
-                      value={appearanceStory}
-                      onChange={(e) => setAppearanceStory(e.target.value)}
-                      placeholder="e.g. Character 1 appears"
-                    />
-                  </Field>
-                </div>
-              )}
             </>
           )}
           {modal === "share" && (
@@ -1442,6 +1548,154 @@ function ModalView({
   );
 }
 
+function TrackMotifAppearanceEditor({
+  trackName,
+  trackNameColor,
+  motifName,
+  motifNameColor,
+  initialAppearances,
+  onClose,
+  onSave,
+}: {
+  trackName: string;
+  trackNameColor?: string;
+  motifName: string;
+  motifNameColor?: string;
+  initialAppearances: TrackMotifAppearance[];
+  onClose: () => void;
+  onSave: (appearances: TrackMotifAppearance[]) => void;
+}) {
+  const [appearances, setAppearances] = useState(initialAppearances);
+
+  function updateAppearance(
+    id: string,
+    field: "appearanceInTrack" | "appearanceInStory",
+    value: string,
+  ) {
+    setAppearances((all) =>
+      all.map((appearance) =>
+        appearance.id === id ? { ...appearance, [field]: value } : appearance,
+      ),
+    );
+  }
+
+  function addAppearance() {
+    setAppearances((all) => [
+      ...all,
+      {
+        id: `appearance-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        appearanceInTrack: "",
+        appearanceInStory: "",
+      },
+    ]);
+  }
+
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div
+        className="modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="track-motif-editor-title"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="modal-head">
+          <div>
+            <div className="eyebrow muted-eyebrow" style={{ color: trackNameColor }}>{trackName}</div>
+            <h2 id="track-motif-editor-title">Edit leitmotif appearance</h2>
+          </div>
+          <button className="icon-button" onClick={onClose} aria-label="Close">
+            <X size={20} />
+          </button>
+        </div>
+        <form
+          className="modal-form"
+          onSubmit={(event) => {
+            event.preventDefault();
+            onSave(
+              appearances.map((appearance) => ({
+                ...appearance,
+                appearanceInTrack: appearance.appearanceInTrack.trim(),
+                appearanceInStory: appearance.appearanceInStory.trim(),
+              })),
+            );
+          }}
+        >
+          <p className="modal-intro" style={{ color: motifNameColor }}>{motifName}</p>
+          <div className="appearance-editor-list">
+            {appearances.map((appearance, index) => (
+              <section className="appearance-editor-item" key={appearance.id}>
+                <div className="appearance-editor-heading">
+                  <strong>Appearance {index + 1}</strong>
+                  <button
+                    className="icon-button"
+                    type="button"
+                    aria-label={`Remove appearance ${index + 1}`}
+                    onClick={() =>
+                      setAppearances((all) =>
+                        all.filter((item) => item.id !== appearance.id),
+                      )
+                    }
+                  >
+                    <Trash2 size={15} />
+                  </button>
+                </div>
+                <Field label="Timestamp in track">
+                  <input
+                    autoFocus={index === 0}
+                    value={appearance.appearanceInTrack}
+                    onChange={(event) =>
+                      updateAppearance(
+                        appearance.id,
+                        "appearanceInTrack",
+                        event.target.value,
+                      )
+                    }
+                    placeholder="e.g. 1:24"
+                  />
+                </Field>
+                <Field label="Description in the story">
+                  <textarea
+                    value={appearance.appearanceInStory}
+                    onChange={(event) =>
+                      updateAppearance(
+                        appearance.id,
+                        "appearanceInStory",
+                        event.target.value,
+                      )
+                    }
+                    placeholder="Describe what is happening when this theme appears."
+                    rows={2}
+                  />
+                </Field>
+              </section>
+            ))}
+          </div>
+          <button
+            className="appearance-add-button"
+            type="button"
+            onClick={addAppearance}
+          >
+            <Plus size={15} /> Add appearance
+          </button>
+          <div className="modal-footer">
+            <button
+              className="button button-ghost"
+              type="button"
+              onClick={onClose}
+            >
+              Cancel
+            </button>
+            <button className="button button-primary" type="submit">
+              Save changes <ArrowRight size={15} />
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 function Field({
   label,
   hint,
@@ -1451,12 +1705,25 @@ function Field({
   hint?: string;
   children: React.ReactNode;
 }) {
+  const fieldLabel = (
+    <span>
+      {label}
+      {hint && <small>{hint}</small>}
+    </span>
+  );
+
+  if (isValidElement(children) && children.type === CheckList) {
+    return (
+      <div className="field">
+        {fieldLabel}
+        {children}
+      </div>
+    );
+  }
+
   return (
     <label className="field">
-      <span>
-        {label}
-        {hint && <small>{hint}</small>}
-      </span>
+      {fieldLabel}
       {children}
     </label>
   );
@@ -1465,13 +1732,15 @@ function CheckList({
   items,
   selected,
   onChange,
+  className = "",
 }: {
-  items: { id: string; name: string }[];
+  items: { id: string; name: string; nameColor?: string }[];
   selected: string[];
   onChange: (value: string[]) => void;
+  className?: string;
 }) {
   return (
-    <div className="check-list">
+    <div className={`check-list ${className}`}>
       {items.map((item) => (
         <label key={item.id}>
           <input
@@ -1485,7 +1754,7 @@ function CheckList({
               )
             }
           />
-          <span>{item.name}</span>
+          <span style={{ color: item.nameColor }}>{item.name}</span>
         </label>
       ))}
     </div>

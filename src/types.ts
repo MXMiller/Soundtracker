@@ -7,6 +7,7 @@ export type ModalType = 'soundtrack' | 'story' | 'motif' | 'track' | 'import' | 
 export interface StoryItem {
   id: string
   name: string
+  nameColor?: string
   type: StoryType
   description: string
   imageUrl: string
@@ -19,6 +20,7 @@ export interface StoryItem {
 export interface Leitmotif {
   id: string
   name: string
+  nameColor?: string
   description: string
   notationUrl: string
   storyItemIds: string[]
@@ -27,6 +29,13 @@ export interface Leitmotif {
 
 export interface TrackMotif {
   leitmotifId: string
+  appearances?: TrackMotifAppearance[]
+  appearanceInTrack?: string
+  appearanceInStory?: string
+}
+
+export interface TrackMotifAppearance {
+  id: string
   appearanceInTrack: string
   appearanceInStory: string
 }
@@ -34,6 +43,7 @@ export interface TrackMotif {
 export interface Track {
   id: string
   name: string
+  nameColor?: string
   composers: string[]
   description: string
   trackNumber: number | null
@@ -46,6 +56,7 @@ export interface Soundtrack {
   ownerId: string
   ownerName: string
   name: string
+  nameColor?: string
   composers: string[]
   description: string
   listeningUrl: string

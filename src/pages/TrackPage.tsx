@@ -10,6 +10,7 @@ export interface TrackPageProps {
   onEdit: () => void;
   onDelete: () => void;
   onNavigate: (entity: SoundtrackEntity) => void;
+  onEditTrackMotif: (motifId: string) => void;
 }
 
 export default function TrackPage({

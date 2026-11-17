@@ -103,7 +103,7 @@ export default function SoundtrackPage({
             {soundtrack.visibility} soundtrack{" "}
             <span className="separator">·</span> by {soundtrack.ownerName}
           </div>
-          <h1>{soundtrack.name}</h1>
+          <h1 style={{ color: soundtrack.nameColor }}>{soundtrack.name}</h1>
           <div className="hero-composers">
             Original music by{" "}
             {soundtrack.composers.join(", ") || "Unknown composer"}

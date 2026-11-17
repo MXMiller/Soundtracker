@@ -4,7 +4,6 @@ import {
   BookOpen,
   ChevronRight,
   Disc3,
-  ExternalLink,
   Heart,
   Layers3,
   MoreHorizontal,
@@ -90,8 +89,7 @@ export function SoundtrackCard({
         <span className="cover-small">
           <AudioLines size={17} /> SOUNDTRACK STUDY&nbsp; / &nbsp;0{index + 1}
         </span>
-        <span className="cover-title">{item.name}</span>
-        <span className="cover-composer">{item.composers.join(" · ")}</span>
+        <span className="cover-title" style={{ color: item.nameColor }}>{item.name}</span>
         <span className="cover-waves">
           <i />
           <i />
@@ -124,12 +122,13 @@ export function SoundtrackCard({
             <Heart size={16} fill={isFavorite ? "currentColor" : "none"} />
           </button>
         </div>
-        <button className="card-name" onClick={onOpen}>
-          {item.name}
-        </button>
         <div className="card-byline">
-          {isMine ? "By you" : `By ${item.ownerName}`} <span>·</span>{" "}
-          {item.composers.join(", ") || "Untitled composer"}
+          Written by: {item.composers.join(", ") || "Unknown composer"}
+          {!isMine && (
+            <>
+              <span>·</span> Shared by {item.ownerName}
+            </>
+          )}
         </div>
         <p className="card-description">
           {item.description || "A musical world waiting to be explored."}
@@ -174,18 +173,25 @@ export function StoryCard({
           ? "gold"
           : "sage";
   return (
-    <article className="entity-card">
+    <article className="entity-card" onClick={onOpen}>
       <div className={`entity-art ${color}`}>
-        <span>{item.type}</span>
-        <div className="art-initial">{item.name.slice(0, 1).toUpperCase()}</div>
         <div className="art-ring" />
       </div>
       <div className="entity-body">
         <div className="entity-card-top">
           <span className="type-label">{item.type}</span>
-          {canEdit && <EntityMenu onEdit={onEdit} onDelete={onDelete} />}
+          {canEdit && (
+            <EntityMenu itemType="story item" onEdit={onEdit} onDelete={onDelete} />
+          )}
         </div>
-        <button className="entity-name" onClick={onOpen}>
+        <button
+          className="entity-name"
+          style={{ color: item.nameColor }}
+          onClick={(event) => {
+            event.stopPropagation();
+            onOpen();
+          }}
+        >
           {item.name}
         </button>
         <p>{item.description || "A story element connected to the music."}</p>
@@ -196,18 +202,25 @@ export function StoryCard({
               {item.musicalKey}
             </span>
           )}
-          {item.motifIds.slice(0, 2).map((id) => (
-            <span key={id}>
+          {item.motifIds.slice(0, 2).map((id) => {
+            const motif = active.leitmotifs.find((m) => m.id === id);
+            return <span key={id} style={{ color: motif?.nameColor }}>
               <AudioLines size={12} />
-              {active.leitmotifs.find((m) => m.id === id)?.name || "Leitmotif"}
-            </span>
-          ))}
+              {motif?.name || "Leitmotif"}
+            </span>;
+          })}
           {item.instruments.slice(0, 1).map((inst) => (
             <span key={inst}>{inst}</span>
           ))}
         </div>
-        <button className="view-details" onClick={onOpen}>
-          View details <ArrowRight size={14} />
+        <button
+          className="view-details"
+          onClick={(event) => {
+            event.stopPropagation();
+            onOpen();
+          }}
+        >
+          View {item.type.toLowerCase()} <ArrowRight size={14} />
         </button>
       </div>
     </article>
@@ -230,7 +243,7 @@ export function MotifCard({
   onDelete: () => void;
 }) {
   return (
-    <article className="entity-card motif-card">
+    <article className="entity-card motif-card" onClick={onOpen}>
       <div className="motif-visual">
         <div className="note-lines">
           <i />
@@ -246,44 +259,58 @@ export function MotifCard({
           <span>♬</span>
           <span>♪</span>
         </div>
-        <div className="motif-index">
-          MOTIF {String(active.leitmotifs.indexOf(item) + 1).padStart(2, "0")}
-        </div>
       </div>
       <div className="entity-body">
         <div className="entity-card-top">
           <span className="type-label motif-label">LEITMOTIF</span>
-          {canEdit && <EntityMenu onEdit={onEdit} onDelete={onDelete} />}
+          {canEdit && (
+            <EntityMenu itemType="leitmotif" onEdit={onEdit} onDelete={onDelete} />
+          )}
         </div>
-        <button className="entity-name" onClick={onOpen}>
+        <button
+          className="entity-name"
+          style={{ color: item.nameColor }}
+          onClick={(event) => {
+            event.stopPropagation();
+            onOpen();
+          }}
+        >
           {item.name}
         </button>
         <p>{item.description || "A musical idea woven into this story."}</p>
         <div className="entity-tags">
-          {item.storyItemIds.slice(0, 2).map((id) => (
-            <span key={id}>
+          {item.storyItemIds.slice(0, 2).map((id) => {
+            const story = active.storyItems.find((s) => s.id === id);
+            return <span key={id} style={{ color: story?.nameColor }}>
               <BookOpen size={12} />
-              {active.storyItems.find((s) => s.id === id)?.name || "Story item"}
-            </span>
-          ))}
-          {item.derivedFromIds.slice(0, 2).map((id) => (
-            <span key={`from-${id}`}>
+              {story?.name || "Story item"}
+            </span>;
+          })}
+          {item.derivedFromIds.slice(0, 2).map((id) => {
+            const motif = active.leitmotifs.find((entry) => entry.id === id);
+            return <span key={`from-${id}`} style={{ color: motif?.nameColor }}>
               <ArrowRight size={12} />
-              From: {active.leitmotifs.find((motif) => motif.id === id)?.name || "Leitmotif"}
-            </span>
-          ))}
+              From: {motif?.name || "Leitmotif"}
+            </span>;
+          })}
           {active.leitmotifs
             .filter((motif) => motif.derivedFromIds.includes(item.id))
             .slice(0, 2)
             .map((motif) => (
-              <span key={`derived-${motif.id}`}>
+              <span key={`derived-${motif.id}`} style={{ color: motif.nameColor }}>
                 <ArrowRight size={12} />
                 Derived: {motif.name}
               </span>
             ))}
         </div>
-        <button className="view-details" onClick={onOpen}>
-          Explore motif <ArrowRight size={14} />
+        <button
+          className="view-details"
+          onClick={(event) => {
+            event.stopPropagation();
+            onOpen();
+          }}
+        >
+          View leitmotif <ArrowRight size={14} />
         </button>
       </div>
     </article>
@@ -305,77 +332,89 @@ export function TrackCard({
   onEdit: () => void;
   onDelete: () => void;
 }) {
+  const features = item.motifAppearances
+    .map((appearance) =>
+      active.leitmotifs.find((motif) => motif.id === appearance.leitmotifId),
+    )
+    .filter((motif): motif is Leitmotif => Boolean(motif));
+
   return (
-    <article className="track-row">
+    <article className="track-row" onClick={onOpen}>
       <div className="track-number">
         {item.trackNumber ? String(item.trackNumber).padStart(2, "0") : "—"}
       </div>
-      <button className="track-play" onClick={onOpen}>
+      <button
+        className="track-play"
+        onClick={(event) => {
+          event.stopPropagation();
+          onOpen();
+        }}
+      >
         <Music2 size={18} />
       </button>
       <div className="track-info">
-        <button className="track-title" onClick={onOpen}>
+        <button
+          className="track-title"
+          style={{ color: item.nameColor }}
+          onClick={(event) => {
+            event.stopPropagation();
+            onOpen();
+          }}
+        >
           {item.name}
         </button>
-        <div className="track-subtitle">
-          {item.composers.join(", ") || "Composer not listed"} <span>·</span>{" "}
-          {item.description || "No description yet"}
-        </div>
-        <div className="track-motif-list">
-          {item.motifAppearances.map((appearance) => (
-            <span key={appearance.leitmotifId}>
-              <AudioLines size={12} />
-              {active.leitmotifs.find((m) => m.id === appearance.leitmotifId)
-                ?.name || "Leitmotif"}
-            </span>
-          ))}
+        <div className="track-composers">
+          {item.composers.join(", ") || "Composer not listed"}
         </div>
       </div>
-      <div className="track-appearance">
-        {item.motifAppearances[0]?.appearanceInTrack && (
-          <>
-            <small>FEATURES AT</small>
-            <span>{item.motifAppearances[0].appearanceInTrack}</span>
-          </>
-        )}
+      <div className="track-description-column">
+        {item.description || "No description yet"}
       </div>
-      {item.listeningUrl && (
-        <a
-          href={item.listeningUrl}
-          target="_blank"
-          rel="noreferrer"
-          className="icon-button"
-          aria-label="Listen to track"
-        >
-          <ExternalLink size={17} />
-        </a>
+      <div className="track-features">
+        <small>FEATURES</small>
+        <span>
+          {features.length
+            ? features.map((motif, index) => (
+                <React.Fragment key={motif.id}>
+                  <span style={{ color: motif.nameColor }}>{motif.name}</span>
+                  {index < features.length - 1 ? ", " : ""}
+                </React.Fragment>
+              ))
+            : "No leitmotifs"}
+        </span>
+      </div>
+      {canEdit && (
+        <div className="track-row-actions">
+          <EntityMenu itemType="track" onEdit={onEdit} onDelete={onDelete} />
+        </div>
       )}
-      {canEdit && <EntityMenu onEdit={onEdit} onDelete={onDelete} />}
-      <button className="track-open" onClick={onOpen}>
-        <ChevronRight size={18} />
-      </button>
     </article>
   );
 }
 
 export function EntityMenu({
+  itemType,
   onEdit,
   onDelete,
 }: {
+  itemType: "story item" | "leitmotif" | "track";
   onEdit: () => void;
   onDelete: () => void;
 }) {
   return (
-    <div className="dropdown-wrap entity-menu">
-      <button className="icon-button" aria-label="Page actions">
+    <div
+      className="dropdown-wrap entity-menu"
+      onClick={(event) => event.stopPropagation()}
+    >
+      <button className="icon-button" aria-label={`${itemType} actions`}>
         <MoreHorizontal size={18} />
       </button>
       <div className="dropdown">
         <button onClick={onEdit}>
-          <Layers3 size={14} /> Edit page
+          <Layers3 size={14} /> Edit {itemType}
         </button>
         <button className="danger" onClick={onDelete}>
-          <Trash2 size={14} /> Delete page
+          <Trash2 size={14} /> Delete {itemType}
         </button>
       </div>
     </div>
@@ -410,7 +449,7 @@ export function RelatedBlock({
       {rows.length ? (
         <div className="related-pills">
           {rows.map((row) => (
-            <button key={row.id} onClick={() => onClick(row)}>
+            <button key={row.id} onClick={() => onClick(row)} style={{ color: row.nameColor }}>
               {icon}
               {row.name}
               <ChevronRight size={13} />

@@ -45,6 +45,7 @@ export interface AppPageRouterProps {
   onOpenEntity: (entity: SoundtrackEntity) => void;
   onNavigateEntity: (entity: SoundtrackEntity) => void;
   onEditEntity: (section: SoundtrackSection, entity: SoundtrackEntity) => void;
+  onEditTrackMotif: (motifId: string) => void;
   onDeleteEntity: (section: SoundtrackSection, id: string) => void;
   onAddEntity: (section: SoundtrackSection) => void;
 }
@@ -98,7 +99,13 @@ export default function AppPageRouter(props: AppPageRouterProps) {
         <LeitmotifPage item={props.detail as Leitmotif} {...detailProps} />
       );
     }
-    return <TrackPage item={props.detail as Track} {...detailProps} />;
+    return (
+      <TrackPage
+        item={props.detail as Track}
+        {...detailProps}
+        onEditTrackMotif={props.onEditTrackMotif}
+      />
+    );
   }
 
   return (

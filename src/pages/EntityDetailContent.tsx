@@ -5,6 +5,7 @@ import {
   BookOpen,
   Disc3,
   ExternalLink,
+  Pencil,
   Trash2,
 } from "lucide-react";
 import type {
@@ -16,6 +17,7 @@ import type {
   Track,
 } from "../types";
 import { InfoBlock, RelatedBlock } from "../components/EntityCards";
+import { getTrackMotifAppearances } from "../utils";
 type Entity = SoundtrackEntity;
 type Section = SoundtrackSection;
 
@@ -29,6 +31,7 @@ export function EntityDetailContent({
   onEdit,
   onDelete,
   onNavigate,
+  onEditTrackMotif,
 }: {
   entity: Entity;
   active: Soundtrack;
@@ -39,6 +42,7 @@ export function EntityDetailContent({
   onEdit: () => void;
   onDelete: () => void;
   onNavigate: (entity: Entity) => void;
+  onEditTrackMotif?: (motifId: string) => void;
 }) {
   const isStory = section === "story",
     isMotif = section === "motifs";
@@ -56,7 +60,12 @@ export function EntityDetailContent({
     ? active.tracks.flatMap((track) =>
         track.motifAppearances
           .filter((a) => a.leitmotifId === entity.id)
-          .map((a) => ({ track, a })),
+          .flatMap((association) =>
+            getTrackMotifAppearances(association).map((appearance) => ({
+              track,
+              a: appearance,
+            })),
+          ),
       )
     : [];
   const pageType = isStory
@@ -69,12 +78,6 @@ export function EntityDetailContent({
         .map((id) => active.tracks.find((t) => t.id === id))
         .filter(Boolean) as Track[])
     : [];
-  const linkedMotifs =
-    !isStory && !isMotif
-      ? ((entity as Track).motifAppearances
-          .map((a) => active.leitmotifs.find((m) => m.id === a.leitmotifId))
-          .filter(Boolean) as Leitmotif[])
-      : [];
   const linkedParents = isMotif
     ? ((entity as Leitmotif).derivedFromIds
         .map((id) => active.leitmotifs.find((m) => m.id === id))
@@ -104,9 +107,9 @@ export function EntityDetailContent({
         </div>
         <div className="entity-page-intro">
           <div className="eyebrow muted-eyebrow">
-            {pageType} <span className="separator">·</span> {active.name}
+            {pageType} <span className="separator">·</span> <span style={{ color: active.nameColor }}>{active.name}</span>
           </div>
-          <h1>{entity.name}</h1>
+          <h1 style={{ color: entity.nameColor }}>{entity.name}</h1>
           <p>{entity.description || "No description added yet."}</p>
         </div>
         {canEdit && (
@@ -236,11 +239,13 @@ export function EntityDetailContent({
               <div className="appearance-row" key={track.id}>
                 <strong>
                   {track.trackNumber ? `${track.trackNumber}. ` : ""}
-                  {track.name}
+                  <span style={{ color: track.nameColor }}>{track.name}</span>
                 </strong>
                 <span>
-                  {a.appearanceInTrack || "Location not specified"}
-                  {a.appearanceInStory ? ` · ${a.appearanceInStory}` : ""}
+                  {a.appearanceInTrack}
+                  {a.appearanceInStory
+                    ? `${a.appearanceInTrack ? " · " : ""}${a.appearanceInStory}`
+                    : ""}
                 </span>
               </div>
             ))}
@@ -248,24 +253,63 @@ export function EntityDetailContent({
         )}
         {!isStory && !isMotif && (
           <div className="entity-page-links">
-            <RelatedBlock
-              title="Leitmotifs in this track"
-              empty="No leitmotifs listed yet"
-              rows={linkedMotifs}
-              icon={<AudioLines size={15} />}
-              onClick={onNavigate}
-            />
-            {(entity as Track).motifAppearances.map((a) => (
-              <div className="appearance-row" key={a.leitmotifId}>
-                <strong>
-                  {active.leitmotifs.find((m) => m.id === a.leitmotifId)?.name}
-                </strong>
-                <span>
-                  {a.appearanceInTrack || "Track location not specified"}
-                  {a.appearanceInStory ? ` · ${a.appearanceInStory}` : ""}
-                </span>
-              </div>
-            ))}
+            <div className="related-block track-motif-connections">
+              <h4>Leitmotifs in this track</h4>
+              {(entity as Track).motifAppearances.length ? (
+                <div className="track-connection-list">
+                  {(entity as Track).motifAppearances.map((association) => {
+                    const motif = active.leitmotifs.find(
+                      (item) => item.id === association.leitmotifId,
+                    );
+                    if (!motif) return null;
+
+                    return (
+                      <div
+                        className="track-connection"
+                        key={association.leitmotifId}
+                      >
+                        <button
+                          className="track-connection-link"
+                          onClick={() => onNavigate(motif)}
+                        >
+                          <AudioLines size={15} />
+                          <span style={{ color: motif.nameColor }}>{motif.name}</span>
+                          <ArrowRight size={13} />
+                        </button>
+                        {getTrackMotifAppearances(association).map((appearance) => {
+                          const description = [
+                            appearance.appearanceInTrack,
+                            appearance.appearanceInStory,
+                          ]
+                            .filter(Boolean)
+                            .join(" · ");
+                          return description ? (
+                            <p
+                              className="track-connection-description"
+                              key={appearance.id}
+                            >
+                              {description}
+                            </p>
+                          ) : null;
+                        })}
+                        {canEdit && onEditTrackMotif && (
+                          <button
+                            className="appearance-edit-button"
+                            onClick={() =>
+                              onEditTrackMotif(association.leitmotifId)
+                            }
+                          >
+                            <Pencil size={13} /> Edit appearances
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <span className="detail-empty">No leitmotifs listed yet</span>
+              )}
+            </div>
           </div>
         )}
       </div>

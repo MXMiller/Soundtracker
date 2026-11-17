@@ -22,8 +22,8 @@ export const initialSoundtracks: Soundtrack[] = [
       { id: 'lm-shard', name: 'Placeholder Leitmotif 2', description: 'Second placeholder leitmotif for testing references.', notationUrl: '', storyItemIds: ['si-elin', 'si-memory'], derivedFromIds: ['lm-home'] },
     ],
     tracks: [
-      { id: 'tr-opening', name: 'Example Track 1', composers: ['Example Composer'], description: 'First placeholder track for testing soundtrack connections.', trackNumber: 1, listeningUrl: '', motifAppearances: [{ leitmotifId: 'lm-home', appearanceInTrack: 'Example timestamp', appearanceInStory: 'Character 1 appears' }] },
-      { id: 'tr-below', name: 'Example Track 2', composers: ['Example Composer'], description: 'Second placeholder track for testing soundtrack connections.', trackNumber: 2, listeningUrl: '', motifAppearances: [{ leitmotifId: 'lm-shard', appearanceInTrack: 'Example timestamp', appearanceInStory: 'Character 1 develops' }] },
+      { id: 'tr-opening', name: 'Example Track 1', composers: ['Example Composer'], description: 'First placeholder track for testing soundtrack connections.', trackNumber: 1, listeningUrl: '', motifAppearances: [{ leitmotifId: 'lm-home', appearances: [{ id: 'tr-opening-lm-home-1', appearanceInTrack: 'Example timestamp', appearanceInStory: 'Character 1 appears' }] }] },
+      { id: 'tr-below', name: 'Example Track 2', composers: ['Example Composer'], description: 'Second placeholder track for testing soundtrack connections.', trackNumber: 2, listeningUrl: '', motifAppearances: [{ leitmotifId: 'lm-shard', appearances: [{ id: 'tr-below-lm-shard-1', appearanceInTrack: 'Example timestamp', appearanceInStory: 'Character 1 develops' }] }] },
     ],
   },
   {
@@ -36,7 +36,7 @@ export const initialSoundtracks: Soundtrack[] = [
       { id: 'si-lighthouse', name: 'Setting 2', type: 'Setting', description: 'Placeholder setting for testing shared soundtracks.', imageUrl: '', musicalKey: 'C major', instruments: ['French horn'], motifIds: ['lm-tide'], trackIds: ['tr-lowtide'] },
     ],
     leitmotifs: [{ id: 'lm-tide', name: 'Placeholder Leitmotif 3', description: 'Placeholder leitmotif for testing shared soundtrack connections.', notationUrl: '', storyItemIds: ['si-lio', 'si-lighthouse'], derivedFromIds: [] }],
-    tracks: [{ id: 'tr-lowtide', name: 'Example Track 3', composers: ['Example Composer'], description: 'Placeholder track for testing shared soundtracks.', trackNumber: 1, listeningUrl: '', motifAppearances: [{ leitmotifId: 'lm-tide', appearanceInTrack: 'Example timestamp', appearanceInStory: 'Character 2 appears' }] }],
+    tracks: [{ id: 'tr-lowtide', name: 'Example Track 3', composers: ['Example Composer'], description: 'Placeholder track for testing shared soundtracks.', trackNumber: 1, listeningUrl: '', motifAppearances: [{ leitmotifId: 'lm-tide', appearances: [{ id: 'tr-lowtide-lm-tide-1', appearanceInTrack: 'Example timestamp', appearanceInStory: 'Character 2 appears' }] }] }],
   },
   {
     id: 'st-night', ownerId: currentUser.id, ownerName: currentUser.name,

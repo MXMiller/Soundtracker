@@ -1,7 +1,21 @@
 import { currentUser, initialSoundtracks } from "./data";
-import type { Soundtrack } from "./types";
+import type { Soundtrack, TrackMotif, TrackMotifAppearance } from "./types";
 
 export const STORE_KEY = "soundtracker-local-v1";
+
+export function getTrackMotifAppearances(
+  connection: TrackMotif,
+): TrackMotifAppearance[] {
+  if (connection.appearances) return connection.appearances;
+  if (!connection.appearanceInTrack && !connection.appearanceInStory) return [];
+  return [
+    {
+      id: `legacy-${connection.leitmotifId}`,
+      appearanceInTrack: connection.appearanceInTrack || "",
+      appearanceInStory: connection.appearanceInStory || "",
+    },
+  ];
+}
 
 export const niceDate = (value: string) =>
   new Intl.DateTimeFormat("en", {
