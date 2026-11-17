@@ -23,7 +23,7 @@ An app for developing your own soundtracks or organizing and disecting other sou
   - Create button creates a new page and opens it in edit mode. The different name, description, etc. fields have default descriptive text.
   - Edit button shows the current page in edit mode. User has to confirm changes. 
   - Delete button prompts the user for confirmation before deleting. 
-- Soundtracks and can be exported as a .md file. 
+- Soundtracks can be exported as a .md file and imported again as a new private copy with internal page links preserved. 
 - Users can search for and view other users public and open projects, similar to a wiki page. 
 
 ### Database design:
@@ -42,3 +42,12 @@ An app for developing your own soundtracks or organizing and disecting other sou
 - Vite to build and deploy. 
 - PostgreSQL and Supabase for backend authentication and storage. 
 - Cloudflare Pages for web hosting. 
+
+### Run locally
+- Install dependencies with `npm install`.
+- Start the local development server with `npm run dev`, then open the URL Vite prints in a browser.
+- This first version is a browser-only demo. It uses sample data and saves edits in local storage; Supabase authentication, database access, and file storage are not connected yet.
+- Build a production bundle with `npm run build`.
+
+## TO-DO:
+- Replace ai-generated images and icons with one made by people. 
