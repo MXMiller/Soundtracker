@@ -50,6 +50,9 @@ An app for developing your own soundtracks or organizing and disecting other sou
 - Build a production bundle with `npm run build`.
 
 ## TO-DO:
+- Setup backend
 - Replace ai-generated images and icons with one made by people. 
-- Make associated blahblahs fields in edit page lists you add to. Options show up as drop downs menus. 
+- Make associated leitmotif and track fields in edit page lists you add to or remove from. Options show up as drop downs menus when you click "add associated leitmotif" or "add associated track". 
 - Fix ai errors. 
+- Add about page. 
+- Maybe add a track type to track items (score, original song, etc.)
