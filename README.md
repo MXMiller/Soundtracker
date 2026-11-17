@@ -51,3 +51,5 @@ An app for developing your own soundtracks or organizing and disecting other sou
 
 ## TO-DO:
 - Replace ai-generated images and icons with one made by people. 
+- Make associated blahblahs fields in edit page lists you add to. Options show up as drop downs menus. 
+- Fix ai errors. 
