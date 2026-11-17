@@ -144,7 +144,7 @@ export function EntityDetailContent({
               )}
               {(entity as StoryItem).instruments.length > 0 && (
                 <InfoBlock
-                  label="Instruments"
+                  label="Associated Instruments"
                   value={(entity as StoryItem).instruments.join(" · ")}
                 />
               )}
