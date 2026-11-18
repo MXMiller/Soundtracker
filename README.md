@@ -40,5 +40,24 @@ An app for developing your own soundtracks or organizing and disecting other sou
 ### Tools used: 
 - Typescript and React for frontend. 
 - Vite to build and deploy. 
-- PostgreSQL and Supabase for backend authentication and storage. 
 - Cloudflare Pages for web hosting. 
+<<<<<<< Updated upstream
+=======
+- PostgreSQL and Supabase for backend authentication and storage. 
+
+![Tech flow](./repo_assets/Soundtracker_system_design.png) 
+
+### Run locally
+- Install dependencies with `npm install`.
+- Start the local development server with `npm run dev`, then open the URL Vite prints in a browser.
+- This first version is a browser-only demo. It uses sample data and saves edits in local storage; Supabase authentication, database access, and file storage are not connected yet.
+- Build a production bundle with `npm run build`.
+
+## TO-DO:
+- Setup backend
+- Replace ai-generated images and icons with one made by people. 
+- Make associated leitmotif and track fields in edit page lists you add to or remove from. Options show up as drop downs menus when you click "add associated leitmotif" or "add associated track". 
+- Fix ai errors. 
+- Add about page. 
+- Maybe add a track type to track items (score, original song, etc.)
+>>>>>>> Stashed changes
