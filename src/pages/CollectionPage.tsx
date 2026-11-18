@@ -28,7 +28,7 @@ export interface CollectionPageProps {
 
 const pageCopy: Record<ViewPage, { title: string; description: string }> = {
   library: {
-    title: "Good morning, Jamie.",
+    title: "Your Library",
     description: "A little space for all the music in your head.",
   },
   explore: {
@@ -46,7 +46,7 @@ const pageCopy: Record<ViewPage, { title: string; description: string }> = {
 };
 
 const pageTitle: Record<ViewPage, string> = {
-  library: "Your collection",
+  library: "Your soundtracks",
   explore: "Explore",
   favorites: "Favorites",
   shared: "Shared with me",
@@ -129,7 +129,6 @@ export function CollectionPage({
       <div className="section-toolbar">
         <div className="list-title">
           <h2>{pageTitle[page]}</h2>
-          <span>{visibleSoundtracks.length} soundtracks</span>
         </div>
         <div className={page === "library" ? "section-tools" : undefined}>
           <PageSearch page={page} query={query} onChange={onQueryChange} />

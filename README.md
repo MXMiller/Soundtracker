@@ -37,11 +37,15 @@ An app for developing your own soundtracks or organizing and disecting other sou
 - `tracks` stores the soundtrack tracklist, including optional track numbers, listening links, and audio file paths. `track_composers` supports multiple composers per track; `track_leitmotifs` records motifs and where they appear in the track or story.
 - Images and notation files belong in Supabase Storage; the database stores their file paths. The schema defines relationships and constraints; Row Level Security policies still need to be added to enforce access rules for database requests. (Audio file storage can be added if I pay for a much higher storage limit.)
 
+![Database ERD](./repo_assets/Soundtracker ERD.webp) 
+
 ### Tools used: 
 - Typescript and React for frontend. 
 - Vite to build and deploy. 
 - PostgreSQL and Supabase for backend authentication and storage. 
 - Cloudflare Pages for web hosting. 
+
+![Tech flow](./repo_assets/Soundtracker system design.png) 
 
 ### Run locally
 - Install dependencies with `npm install`.
@@ -50,4 +54,9 @@ An app for developing your own soundtracks or organizing and disecting other sou
 - Build a production bundle with `npm run build`.
 
 ## TO-DO:
+- Setup backend
 - Replace ai-generated images and icons with one made by people. 
+- Make associated leitmotif and track fields in edit page lists you add to or remove from. Options show up as drop downs menus when you click "add associated leitmotif" or "add associated track". 
+- Fix ai errors. 
+- Add about page. 
+- Maybe add a track type to track items (score, original song, etc.)

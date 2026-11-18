@@ -21,6 +21,7 @@ import type {
   ViewPage,
 } from "../types";
 import { niceDate } from "../utils";
+import { Fragment } from "react";
 type Entity = SoundtrackEntity;
 type Page = ViewPage;
 
@@ -375,10 +376,10 @@ export function TrackCard({
         <span>
           {features.length
             ? features.map((motif, index) => (
-                <React.Fragment key={motif.id}>
+                <Fragment key={motif.id}>
                   <span style={{ color: motif.nameColor }}>{motif.name}</span>
                   {index < features.length - 1 ? ", " : ""}
-                </React.Fragment>
+                </Fragment>
               ))
             : "No leitmotifs"}
         </span>

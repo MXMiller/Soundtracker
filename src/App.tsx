@@ -407,7 +407,7 @@ function App() {
     showToast("Leitmotif details saved");
   }
   function deleteEntity(kind: Section, id: string) {
-    if (!active || !window.confirm("Delete this page? This cannot be undone."))
+    if (!active || !window.confirm("Are you sure you want to delete this item? This cannot be undone."))
       return;
     const collection =
       kind === "story"
@@ -458,7 +458,7 @@ function App() {
     });
     setDetail(null);
     setDetailHistory([]);
-    showToast("Page deleted");
+    showToast("Item deleted");
   }
   function deleteSoundtrack(item: Soundtrack) {
     if (
@@ -1193,7 +1193,7 @@ function ModalView({
                 />
               </Field>
               <Field label="Name color">
-                <input type="color" value={nameColor || "#222222"} onChange={(e) => setNameColor(e.target.value)} />
+                <input type="color" value={nameColor || "#222222"} defaultValue="#222222" onChange={(e) => setNameColor(e.target.value)} />
               </Field>
               <Field label="Composer(s)" hint="Separate names with commas">
                 <input
@@ -1271,11 +1271,11 @@ function ModalView({
                     placeholder="e.g. D minor"
                   />
                 </Field>
-                <Field label="Instruments" hint="Comma separated">
+                <Field label="Associated, Instruments" hint="Comma separated">
                   <input
                     value={instruments}
                     onChange={(e) => setInstruments(e.target.value)}
-                    placeholder="Cello, flute…"
+                    placeholder="Piano, violin, synth…"
                   />
                 </Field>
               </div>
