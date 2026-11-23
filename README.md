@@ -39,11 +39,11 @@ An app for developing your own soundtracks or organizing and disecting other sou
 
 ![Database ERD](./repo_assets/Soundtracker_ERD.webp) 
 
-### Tools used: 
+### Tech Stack: 
 - Typescript and React for frontend. 
 - Vite to build and deploy. 
-- PostgreSQL and Supabase for backend authentication and storage. 
 - Cloudflare Pages for web hosting. 
+- PostgreSQL and Supabase for backend authentication and storage. 
 
 ![Tech flow](./repo_assets/Soundtracker_system_design.png) 
 
