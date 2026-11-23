@@ -23,7 +23,7 @@ An app for developing your own soundtracks or organizing and disecting other sou
   - Create button creates a new page and opens it in edit mode. The different name, description, etc. fields have default descriptive text.
   - Edit button shows the current page in edit mode. User has to confirm changes. 
   - Delete button prompts the user for confirmation before deleting. 
-- Soundtracks and can be exported as a .md file. 
+- Soundtracks can be exported as a .md file and imported again as a new private copy with internal page links preserved. 
 - Users can search for and view other users public and open projects, similar to a wiki page. 
 
 ### Database design:
@@ -37,7 +37,9 @@ An app for developing your own soundtracks or organizing and disecting other sou
 - `tracks` stores the soundtrack tracklist, including optional track numbers, listening links, and audio file paths. `track_composers` supports multiple composers per track; `track_leitmotifs` records motifs and where they appear in the track or story.
 - Images and notation files belong in Supabase Storage; the database stores their file paths. The schema defines relationships and constraints; Row Level Security policies still need to be added to enforce access rules for database requests. (Audio file storage can be added if I pay for a much higher storage limit.)
 
-### Tools used: 
+![Database ERD](./repo_assets/Soundtracker_ERD.webp) 
+
+### Tech Stack: 
 - Typescript and React for frontend. 
 - Vite to build and deploy. 
 - Cloudflare Pages for web hosting. 
