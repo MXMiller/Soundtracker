@@ -72,6 +72,13 @@ export function SoundtrackCard({
   onOpen,
   onFavorite,
   onOpenProfile,
+  canReorder = false,
+  isDragging,
+  isDropTarget,
+  onDragStart,
+  onDragOver,
+  onDrop,
+  onDragEnd,
 }: {
   item: Soundtrack;
   index: number;
@@ -80,9 +87,24 @@ export function SoundtrackCard({
   onOpen: () => void;
   onFavorite: () => void;
   onOpenProfile?: (ownerId: string) => void;
+  canReorder?: boolean;
+  isDragging?: boolean;
+  isDropTarget?: boolean;
+  onDragStart?: (event: React.DragEvent<HTMLElement>) => void;
+  onDragOver?: (event: React.DragEvent<HTMLElement>) => void;
+  onDrop?: (event: React.DragEvent<HTMLElement>) => void;
+  onDragEnd?: () => void;
 }) {
   return (
-    <article className="soundtrack-card">
+    <article
+      className={`soundtrack-card${isDragging ? " is-dragging" : ""}${isDropTarget ? " is-drop-target" : ""}`}
+      draggable={canReorder}
+      onDragStart={onDragStart}
+      onDragOver={onDragOver}
+      onDrop={onDrop}
+      onDragEnd={onDragEnd}
+      title={canReorder ? "Drag to reorder your soundtracks" : undefined}
+    >
       <button className={`card-cover cover-${index % 4}`} onClick={onOpen}>
         <div className="cover-pattern">
           <div />
@@ -90,7 +112,7 @@ export function SoundtrackCard({
           <div />
         </div>
         <span className="cover-small">
-          <AudioLines size={17} /> SOUNDTRACK STUDY&nbsp; / &nbsp;0{index + 1}
+          <AudioLines size={17} /> SOUNDTRACK&nbsp; / &nbsp;0{index + 1}
         </span>
         <span className="cover-title" style={{ color: item.nameColor }}>{item.name}</span>
         <span className="cover-waves">
@@ -159,6 +181,13 @@ export function StoryCard({
   onOpen,
   onEdit,
   onDelete,
+  canReorder = false,
+  isDragging,
+  isDropTarget,
+  onDragStart,
+  onDragOver,
+  onDrop,
+  onDragEnd,
 }: {
   item: StoryItem;
   active: Soundtrack;
@@ -166,6 +195,13 @@ export function StoryCard({
   onOpen: () => void;
   onEdit: () => void;
   onDelete: () => void;
+  canReorder?: boolean;
+  isDragging?: boolean;
+  isDropTarget?: boolean;
+  onDragStart?: (event: React.DragEvent<HTMLElement>) => void;
+  onDragOver?: (event: React.DragEvent<HTMLElement>) => void;
+  onDrop?: (event: React.DragEvent<HTMLElement>) => void;
+  onDragEnd?: () => void;
 }) {
   const color =
     item.type === "Character"
@@ -176,7 +212,16 @@ export function StoryCard({
           ? "gold"
           : "sage";
   return (
-    <article className="entity-card" onClick={onOpen}>
+    <article
+      className={`entity-card${isDragging ? " is-dragging" : ""}${isDropTarget ? " is-drop-target" : ""}`}
+      onClick={onOpen}
+      draggable={canReorder}
+      onDragStart={onDragStart}
+      onDragOver={onDragOver}
+      onDrop={onDrop}
+      onDragEnd={onDragEnd}
+      title={canReorder ? "Drag to reorder story items" : undefined}
+    >
       <div className={`entity-art ${color}`}>
         <div className="art-ring" />
       </div>
@@ -237,6 +282,13 @@ export function MotifCard({
   onOpen,
   onEdit,
   onDelete,
+  canReorder = false,
+  isDragging,
+  isDropTarget,
+  onDragStart,
+  onDragOver,
+  onDrop,
+  onDragEnd,
 }: {
   item: Leitmotif;
   active: Soundtrack;
@@ -244,9 +296,25 @@ export function MotifCard({
   onOpen: () => void;
   onEdit: () => void;
   onDelete: () => void;
+  canReorder?: boolean;
+  isDragging?: boolean;
+  isDropTarget?: boolean;
+  onDragStart?: (event: React.DragEvent<HTMLElement>) => void;
+  onDragOver?: (event: React.DragEvent<HTMLElement>) => void;
+  onDrop?: (event: React.DragEvent<HTMLElement>) => void;
+  onDragEnd?: () => void;
 }) {
   return (
-    <article className="entity-card motif-card" onClick={onOpen}>
+    <article
+      className={`entity-card motif-card${isDragging ? " is-dragging" : ""}${isDropTarget ? " is-drop-target" : ""}`}
+      onClick={onOpen}
+      draggable={canReorder}
+      onDragStart={onDragStart}
+      onDragOver={onDragOver}
+      onDrop={onDrop}
+      onDragEnd={onDragEnd}
+      title={canReorder ? "Drag to reorder leitmotifs" : undefined}
+    >
       <div className="motif-visual">
         <div className="note-lines">
           <i />
@@ -327,6 +395,12 @@ export function TrackCard({
   onOpen,
   onEdit,
   onDelete,
+  onDragStart,
+  onDragOver,
+  onDrop,
+  onDragEnd,
+  isDragging,
+  isDropTarget,
 }: {
   item: Track;
   active: Soundtrack;
@@ -334,6 +408,12 @@ export function TrackCard({
   onOpen: () => void;
   onEdit: () => void;
   onDelete: () => void;
+  onDragStart?: (event: React.DragEvent<HTMLElement>) => void;
+  onDragOver?: (event: React.DragEvent<HTMLElement>) => void;
+  onDrop?: (event: React.DragEvent<HTMLElement>) => void;
+  onDragEnd?: () => void;
+  isDragging?: boolean;
+  isDropTarget?: boolean;
 }) {
   const features = item.motifAppearances
     .map((appearance) =>
@@ -342,8 +422,16 @@ export function TrackCard({
     .filter((motif): motif is Leitmotif => Boolean(motif));
 
   return (
-    <article className="track-row" onClick={onOpen}>
-      <div className="track-number">
+    <article
+      className={`track-row${isDragging ? " is-dragging" : ""}${isDropTarget ? " is-drop-target" : ""}`}
+      onClick={onOpen}
+      draggable={canEdit}
+      onDragStart={onDragStart}
+      onDragOver={onDragOver}
+      onDrop={onDrop}
+      onDragEnd={onDragEnd}
+    >
+      <div className="track-number" title={canEdit ? "Drag this track to reorder" : undefined}>
         {item.trackNumber ? String(item.trackNumber).padStart(2, "0") : "—"}
       </div>
       <button

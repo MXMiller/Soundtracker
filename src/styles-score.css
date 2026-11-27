@@ -913,10 +913,27 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .profile-actions { display: flex; gap: 10px; }
 .profile-saved { display: inline-flex; gap: 5px; align-items: center; margin-left: 12px; color: #3e6a50; font-size: 13px; }
 .profile-page .section-toolbar { margin-top: 28px; }
+.profile-welcome-row { align-items: flex-start; }
+.profile-heading { display: flex; align-items: flex-start; gap: 20px; min-width: 0; }
+.profile-heading-copy { min-width: 0; }
+.profile-heading-copy h1 { margin-top: 7px; }
+.profile-heading-copy p { max-width: 680px; }
+.profile-edit-form { width: min(100%, 900px); margin: 12px 0 24px; }
+.profile-edit-form .form-row { align-items: start; }
+.profile-edit-form .form-row > * { flex: 1; }
+
+.track-row[draggable="true"] { cursor: grab; }
+.track-row.is-dragging { opacity: .45; }
+.track-row.is-drop-target { outline: 2px dashed #56524a; outline-offset: 2px; }
+.track-number[title] { cursor: grab; }
+.soundtrack-card[draggable="true"], .entity-card[draggable="true"] { cursor: grab; }
+.soundtrack-card.is-dragging, .entity-card.is-dragging { opacity: .45; }
+.soundtrack-card.is-drop-target, .entity-card.is-drop-target { outline: 2px dashed #56524a; outline-offset: 3px; }
 
 @media (max-width: 560px) {
   .auth-card { padding: 26px 22px; }
   .profile-hero { gap: 15px; }
+  .profile-heading { gap: 13px; }
 }
 
 @media (max-width: 390px) {

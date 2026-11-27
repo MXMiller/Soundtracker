@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
   Bookmark,
   ChevronDown,
@@ -25,6 +25,7 @@ export interface CollectionPageProps {
   onCreate: () => void;
   onImport: () => void;
   onOpenProfile: (userId: string) => void;
+  onReorderSoundtracks: (orderedSoundtrackIds: string[]) => void;
 }
 
 const pageCopy: Record<ViewPage, { title: string; description: string }> = {
@@ -67,7 +68,10 @@ export function CollectionPage({
   onCreate,
   onImport,
   onOpenProfile,
+  onReorderSoundtracks,
 }: CollectionPageProps) {
+  const [draggedSoundtrackId, setDraggedSoundtrackId] = useState<string | null>(null);
+  const [dropTargetId, setDropTargetId] = useState<string | null>(null);
   const copy = pageCopy[page];
   const sharedCount = useMemo(
     () =>
@@ -76,6 +80,21 @@ export function CollectionPage({
       ).length,
     [currentUserId, isMine, soundtracks],
   );
+
+  function dropSoundtrack(event: React.DragEvent<HTMLElement>, targetId: string) {
+    event.preventDefault();
+    const sourceId = event.dataTransfer.getData("text/plain") || draggedSoundtrackId;
+    if (!sourceId || sourceId === targetId) return;
+    const ordered = visibleSoundtracks.map((item) => item.id);
+    const sourceIndex = ordered.indexOf(sourceId);
+    const targetIndex = ordered.indexOf(targetId);
+    if (sourceIndex < 0 || targetIndex < 0) return;
+    ordered.splice(sourceIndex, 1);
+    ordered.splice(targetIndex, 0, sourceId);
+    onReorderSoundtracks(ordered);
+    setDraggedSoundtrackId(null);
+    setDropTargetId(null);
+  }
 
   return (
     <div className="content library-page">
@@ -155,6 +174,26 @@ export function CollectionPage({
               onOpen={() => onOpen(item)}
               onFavorite={() => onFavorite(item)}
               onOpenProfile={onOpenProfile}
+              canReorder={page === "library" && !query}
+              isDragging={draggedSoundtrackId === item.id}
+              isDropTarget={dropTargetId === item.id && draggedSoundtrackId !== item.id}
+              onDragStart={(event) => {
+                if (page !== "library" || query) return;
+                setDraggedSoundtrackId(item.id);
+                event.dataTransfer.effectAllowed = "move";
+                event.dataTransfer.setData("text/plain", item.id);
+              }}
+              onDragOver={(event) => {
+                if (page !== "library" || query) return;
+                event.preventDefault();
+                event.dataTransfer.dropEffect = "move";
+                setDropTargetId(item.id);
+              }}
+              onDrop={(event) => dropSoundtrack(event, item.id)}
+              onDragEnd={() => {
+                setDraggedSoundtrackId(null);
+                setDropTargetId(null);
+              }}
             />
           ))}
         </div>

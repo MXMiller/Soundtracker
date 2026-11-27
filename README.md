@@ -33,7 +33,7 @@ An app for developing your own soundtracks or organizing and dissecting other so
 - [`supabase-app-setup.sql`](supabase-app-setup.sql) sets up the website's profile trigger, Row Level Security policies, and app-facing soundtrack document, access, and favorite tables.
 - Supabase Auth manages passwords and sign-in. Each `profiles` row uses the matching Auth user UUID and stores the user's username, email, profile image path, and description. The public profile view omits email addresses.
 - The website stores each complete soundtrack, including its story items, leitmotifs, tracks, links, and chosen name colors, as JSONB in `soundtracker_soundtrack_documents`. The owner, visibility, and timestamps are also indexed as regular columns for access checks and browsing.
-- `soundtracker_document_access` stores view or edit grants. `soundtracker_favorites` stores each user's saved soundtracks. Row Level Security restricts access to owners, invited users, and soundtracks marked public or open.
+- `soundtracker_document_access` stores view or edit grants. `soundtracker_favorites` stores each user's saved soundtracks, and `soundtracker_user_library_order` stores each user's personal My Library arrangement. Row Level Security restricts access to owners, invited users, and soundtracks marked public or open.
 - The normalized tables in `soundtracker-schema.sql` document the relational model. The current website uses the JSONB document table so the app can save and restore a whole soundtrack and its internal links together.
 - The browser uses only the Supabase URL and publishable key. Keep secret keys and Supabase management tokens out of `VITE_` variables and client code.
 

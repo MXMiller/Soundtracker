@@ -67,6 +67,8 @@ function App() {
   const [authMessage, setAuthMessage] = useState("");
   const [profiles, setProfiles] = useState<UserProfile[]>([]);
   const [profileViewId, setProfileViewId] = useState<string | null>(null);
+  const [profileReturnId, setProfileReturnId] = useState<string | null>(null);
+  const [profileQuery, setProfileQuery] = useState("");
   const [page, setPage] = useState<Page>("library");
   const [activeId, setActiveId] = useState<string | null>(null);
   const [section, setSection] = useState<Section>("story");
@@ -133,12 +135,13 @@ function App() {
     const userId = session.user.id;
     setDataReady(false);
     Promise.all([
-      supabase.from("soundtracker_soundtrack_documents").select("id, owner_id, owner_name, name, visibility, payload, updated_at"),
+      supabase.from("soundtracker_soundtrack_documents").select("id, owner_id, owner_name, name, visibility, library_order, payload, updated_at"),
       supabase.from("public_profiles").select("id, username, description, profile_image_file_path"),
       supabase.from("soundtracker_favorites").select("soundtrack_id").eq("user_id", userId),
       supabase.from("profiles").select("id, username, description, profile_image_file_path").eq("id", userId).maybeSingle(),
       supabase.from("soundtracker_document_access").select("soundtrack_id, user_id, permission"),
-    ]).then(([docsResult, profilesResult, favoritesResult, ownProfileResult, accessResult]) => {
+      supabase.from("soundtracker_user_library_order").select("soundtrack_id, sort_order").eq("user_id", userId),
+    ]).then(([docsResult, profilesResult, favoritesResult, ownProfileResult, accessResult, libraryOrderResult]) => {
       if (cancelled) return;
       if (docsResult.error) setAuthMessage(`Could not load soundtrack data: ${docsResult.error.message}`);
       const loadedProfiles = (profilesResult.data || []) as UserProfile[];
@@ -153,13 +156,29 @@ function App() {
         access[grant.user_id] = grant.permission;
         accessBySoundtrack.set(grant.soundtrack_id, access);
       });
-      setSoundtracks(((docsResult.data || []) as Array<{ id: string; owner_id: string; owner_name: string; name: string; visibility: Soundtrack["visibility"]; payload: Soundtrack; updated_at: string }>).map((row) => ({
+      const documentRows = (docsResult.data || []) as Array<{ id: string; owner_id: string; owner_name: string; name: string; visibility: Soundtrack["visibility"]; library_order: number | null; payload: Soundtrack; updated_at: string }>;
+      const userOrder = new Map((libraryOrderResult.data || []).map((row) => [row.soundtrack_id, row.sort_order]));
+      let nextOrder = Math.max(0, ...userOrder.values()) + 1;
+      const missingOrderRows = [...documentRows]
+        .filter((row) => !userOrder.has(row.id))
+        .sort((first, second) => {
+          const firstOwned = first.owner_id === userId;
+          const secondOwned = second.owner_id === userId;
+          if (firstOwned !== secondOwned) return firstOwned ? -1 : 1;
+          if (firstOwned) return (first.library_order || 0) - (second.library_order || 0);
+          return second.updated_at.localeCompare(first.updated_at);
+        });
+      missingOrderRows.forEach((row) => userOrder.set(row.id, nextOrder++));
+      if (libraryOrderResult.error) setAuthMessage(`Could not load library order: ${libraryOrderResult.error.message}`);
+      setSoundtracks(documentRows.map((row) => ({
         ...row.payload,
         id: row.id,
         ownerId: row.owner_id,
         ownerName: profileNames.get(row.owner_id) || row.owner_name,
         name: row.name,
         visibility: row.visibility,
+        libraryOrder: row.library_order ?? row.payload.libraryOrder,
+        userLibraryOrder: userOrder.get(row.id),
         updatedAt: row.updated_at,
         collaborators: accessBySoundtrack.get(row.id) || {},
       })));
@@ -177,19 +196,42 @@ function App() {
 
   useEffect(() => {
     if (!session?.user.id || !dataReady) return;
-    const rows = soundtracks.map((item) => ({
+    const rows = soundtracks.map((item) => {
+      const payload = { ...item };
+      delete payload.userLibraryOrder;
+      return {
       id: item.id,
       owner_id: item.ownerId,
       owner_name: item.ownerName,
       name: item.name,
       visibility: item.visibility,
-      payload: item,
+      library_order: item.libraryOrder ?? null,
+      payload,
       created_at: item.createdAt,
       updated_at: item.updatedAt,
-    }));
-    if (rows.length) supabase.from("soundtracker_soundtrack_documents").upsert(rows).then(({ error }) => {
-      if (error) setAuthMessage(`Could not save soundtrack changes: ${error.message}`);
-    });
+    }; });
+    const ownedRows = rows.filter((row) => row.owner_id === session.user.id);
+    const editableRows = rows.filter((row) => row.owner_id !== session.user.id && (
+      row.visibility === "open" || row.payload.collaborators[session.user.id] === "edit"
+    ));
+    const orderRows = soundtracks
+      .filter((item) => item.userLibraryOrder !== undefined)
+      .map((item) => ({ user_id: session.user.id, soundtrack_id: item.id, sort_order: item.userLibraryOrder! }));
+    void (async () => {
+      if (ownedRows.length) {
+        const { error } = await supabase.from("soundtracker_soundtrack_documents").upsert(ownedRows);
+        if (error) setAuthMessage(`Could not save soundtrack changes: ${error.message}`);
+      }
+      for (const row of editableRows) {
+        const { id, ...values } = row;
+        const { error } = await supabase.from("soundtracker_soundtrack_documents").update(values).eq("id", id);
+        if (error) setAuthMessage(`Could not save soundtrack changes: ${error.message}`);
+      }
+      if (orderRows.length) {
+        const { error } = await supabase.from("soundtracker_user_library_order").upsert(orderRows);
+        if (error) setAuthMessage(`Could not save library order: ${error.message}`);
+      }
+    })();
   }, [soundtracks, session?.user.id, dataReady]);
   useEffect(
     () =>
@@ -304,8 +346,8 @@ function App() {
     item.collaborators[currentUser.id] === "edit";
   const canDelete = (item: Soundtrack) => mine(item);
   const visibleSoundtracks = useMemo(
-    () =>
-      soundtracks
+    () => {
+      const matches = soundtracks
         .filter((item) => {
           if (page === "library")
             return mine(item) || Boolean(item.collaborators[currentUser.id]);
@@ -318,8 +360,14 @@ function App() {
           `${item.name} ${item.composers.join(" ")} ${item.ownerName}`
             .toLowerCase()
             .includes(query.toLowerCase()),
-        ),
-    [soundtracks, page, query, favoriteIds],
+        );
+      if (page !== "library") return matches;
+      return matches.sort((first, second) => {
+        return (first.userLibraryOrder ?? first.libraryOrder ?? Number.MAX_SAFE_INTEGER)
+          - (second.userLibraryOrder ?? second.libraryOrder ?? Number.MAX_SAFE_INTEGER);
+      });
+    },
+    [soundtracks, page, query, favoriteIds, currentUser.id],
   );
 
   function patchActive(updater: (item: Soundtrack) => Soundtrack) {
@@ -331,6 +379,35 @@ function App() {
           : item,
       ),
     );
+  }
+  function reorderTracks(orderedTrackIds: string[]) {
+    patchActive((item) => {
+      const tracksById = new Map(item.tracks.map((track) => [track.id, track]));
+      const reordered = orderedTrackIds
+        .map((id) => tracksById.get(id))
+        .filter((track): track is Track => Boolean(track))
+        .map((track, index) => ({ ...track, trackNumber: index + 1 }));
+      return { ...item, tracks: reordered };
+    });
+  }
+  function reorderLibrarySoundtracks(orderedSoundtrackIds: string[]) {
+    const orderById = new Map(orderedSoundtrackIds.map((id, index) => [id, index + 1]));
+    setSoundtracks((all) => all.map((item) => {
+      const userLibraryOrder = orderById.get(item.id);
+      return userLibraryOrder === undefined ? item : { ...item, userLibraryOrder };
+    }));
+  }
+  function reorderItems(kind: "story" | "motifs", orderedIds: string[]) {
+    patchActive((item) => {
+      const collection = kind === "story" ? item.storyItems : item.leitmotifs;
+      const byId = new Map(collection.map((entity) => [entity.id, entity]));
+      const ordered = orderedIds
+        .map((id) => byId.get(id))
+        .filter((entity): entity is StoryItem | Leitmotif => Boolean(entity));
+      return kind === "story"
+        ? { ...item, storyItems: ordered as StoryItem[] }
+        : { ...item, leitmotifs: ordered as Leitmotif[] };
+    });
   }
   function openModal(type: Modal, value: Entity | Soundtrack | null = null) {
     setEditing(value);
@@ -370,6 +447,8 @@ function App() {
         ownerName: currentUser.name,
         name: values.name || "Untitled soundtrack",
         nameColor: values.nameColor,
+        libraryOrder: soundtracks.filter(mine).reduce((highest, row) => Math.max(highest, row.libraryOrder || 0), 0) + 1,
+        userLibraryOrder: soundtracks.reduce((highest, row) => Math.max(highest, row.userLibraryOrder || 0), 0) + 1,
         composers: values.composers || [],
         description: values.description || "",
         listeningUrl: values.listeningUrl || "",
@@ -381,7 +460,7 @@ function App() {
         leitmotifs: [],
         tracks: [],
       };
-      setSoundtracks((all) => [item, ...all]);
+      setSoundtracks((all) => [...all, item]);
       setActiveId(item.id);
       setSection("story");
       setPage("library");
@@ -405,13 +484,32 @@ function App() {
           : "tracks";
     const id = editing && "id" in editing ? editing.id : uid();
     const entity = { ...(editing || {}), ...value, id } as Entity;
+    let savedEntity = entity;
+    let reorderedTracks: Track[] | null = null;
+    if (kind === "track") {
+      const currentTracks = [...target.tracks].sort((first, second) => {
+        if (first.trackNumber === null) return second.trackNumber === null ? 0 : 1;
+        if (second.trackNumber === null) return -1;
+        return first.trackNumber - second.trackNumber;
+      });
+      const currentIndex = currentTracks.findIndex((track) => track.id === id);
+      const remaining = currentTracks.filter((track) => track.id !== id);
+      const requestedNumber = Number(value.trackNumber);
+      const numberToInsert = Number.isFinite(requestedNumber) && requestedNumber > 0
+        ? Math.floor(requestedNumber)
+        : currentIndex >= 0 ? currentIndex + 1 : remaining.length + 1;
+      const insertionIndex = Math.max(0, Math.min(remaining.length, numberToInsert - 1));
+      remaining.splice(insertionIndex, 0, { ...(entity as Track), trackNumber: insertionIndex + 1 });
+      reorderedTracks = remaining.map((track, index) => ({ ...track, trackNumber: index + 1 }));
+      savedEntity = reorderedTracks.find((track) => track.id === id) as Track;
+    }
     setSoundtracks((all) => all.map((item) => {
       if (item.id !== target.id) return item;
       const updated = { ...item, updatedAt: new Date().toISOString() };
-      const rows = [...updated[collection]] as Entity[];
+      const rows = (reorderedTracks || [...updated[collection]]) as Entity[];
       const index = rows.findIndex((row) => row.id === id);
-      if (index < 0) rows.unshift(entity);
-      else rows[index] = entity;
+      if (index < 0) rows.push(savedEntity);
+      else rows[index] = savedEntity;
       const next = { ...updated, [collection]: rows } as Soundtrack;
       if (kind === "story") {
         const story = entity as StoryItem;
@@ -436,12 +534,12 @@ function App() {
     setModal(null);
     setEntitySoundtrackId(null);
     if (editing) {
-      if (detail?.id === entity.id) setDetail(entity);
+      if (detail?.id === savedEntity.id) setDetail(savedEntity);
       showToast("Changes saved");
     } else {
       setToast("");
       setCreatedItemNotice({
-        entity,
+        entity: savedEntity,
         soundtrackId: target.id,
         soundtrackName: target.name,
       });
@@ -501,6 +599,16 @@ function App() {
         ...item,
         [collection]: item[collection].filter((row) => row.id !== id),
       } as Soundtrack;
+      if (kind === "tracks") {
+        next.tracks = [...next.tracks].sort((first, second) => {
+          if (first.trackNumber === null) return second.trackNumber === null ? 0 : 1;
+          if (second.trackNumber === null) return -1;
+          return first.trackNumber - second.trackNumber;
+        }).map((track, index) => ({
+          ...track,
+          trackNumber: index + 1,
+        }));
+      }
       if (kind === "story") {
         next.leitmotifs = next.leitmotifs.map((m) => ({
           ...m,
@@ -578,8 +686,14 @@ function App() {
     const reader = new FileReader();
     reader.onload = () => {
       try {
-        const imported = { ...parseMarkdown(String(reader.result)), ownerId: currentUser.id, ownerName: currentUser.name };
-        setSoundtracks((all) => [imported, ...all]);
+        const imported = {
+          ...parseMarkdown(String(reader.result)),
+          ownerId: currentUser.id,
+          ownerName: currentUser.name,
+          libraryOrder: soundtracks.filter(mine).reduce((highest, row) => Math.max(highest, row.libraryOrder || 0), 0) + 1,
+          userLibraryOrder: soundtracks.reduce((highest, row) => Math.max(highest, row.userLibraryOrder || 0), 0) + 1,
+        };
+        setSoundtracks((all) => [...all, imported]);
         setActiveId(imported.id);
         setDetail(null);
         setDetailHistory([]);
@@ -739,6 +853,8 @@ function App() {
           <button
             className={page === "library" && !active ? "selected" : ""}
             onClick={() => {
+              setProfileViewId(null);
+              setProfileReturnId(null);
               setPage("library");
               setActiveId(null);
               setMobileNav(false);
@@ -752,6 +868,8 @@ function App() {
           <button
             className={page === "explore" ? "selected" : ""}
             onClick={() => {
+              setProfileViewId(null);
+              setProfileReturnId(null);
               setPage("explore");
               setActiveId(null);
               setMobileNav(false);
@@ -762,6 +880,8 @@ function App() {
           <button
             className={page === "favorites" ? "selected" : ""}
             onClick={() => {
+              setProfileViewId(null);
+              setProfileReturnId(null);
               setPage("favorites");
               setActiveId(null);
               setMobileNav(false);
@@ -772,6 +892,8 @@ function App() {
           <button
             className={page === "shared" ? "selected" : ""}
             onClick={() => {
+              setProfileViewId(null);
+              setProfileReturnId(null);
               setPage("shared");
               setActiveId(null);
               setMobileNav(false);
@@ -787,7 +909,7 @@ function App() {
           <ChevronRight size={15} />
         </div>
         <div className="account">
-          <button className="account-profile" onClick={() => setProfileViewId(currentUser.id)}>
+          <button className="account-profile" onClick={() => { setProfileReturnId(null); setProfileViewId(currentUser.id); }}>
             <div className="avatar">{currentUser.name.slice(0, 2).toUpperCase()}</div>
             <span className="account-copy">
               <strong>{currentUser.name}</strong>
@@ -832,7 +954,7 @@ function App() {
             })}
           </div>
           <div className="top-actions">
-            <button className="avatar top-avatar" title="View profile" onClick={() => setProfileViewId(currentUser.id)}>
+            <button className="avatar top-avatar" title="View profile" onClick={() => { setProfileReturnId(null); setProfileViewId(currentUser.id); }}>
               {currentUser.name.slice(0, 2).toUpperCase()}
             </button>
           </div>
@@ -843,12 +965,14 @@ function App() {
             profile={viewedProfile}
             isOwnProfile={profileViewId === currentUser.id}
             soundtracks={soundtracks.filter((item) => item.ownerId === profileViewId && (profileViewId === currentUser.id || item.visibility !== "private"))}
-            onBack={() => setProfileViewId(null)}
+            query={profileQuery}
+            onQueryChange={setProfileQuery}
             onSave={saveProfile}
             onOpenSoundtrack={(item) => {
+              setProfileReturnId(profileViewId);
               setProfileViewId(null);
               setActiveId(item.id);
-              setPage("explore");
+              setPage(profileViewId === currentUser.id ? "library" : "explore");
               setSection("story");
               setDetail(null);
             }}
@@ -858,7 +982,11 @@ function App() {
         ) : <AppPageRouter
           page={page}
           currentUserId={currentUser.id}
-          onOpenProfile={(userId) => { setProfileViewId(userId); setActiveId(null); setDetail(null); }}
+          onOpenProfile={(userId) => { setProfileReturnId(null); setProfileViewId(userId); setActiveId(null); setDetail(null); }}
+          onReorderTracks={reorderTracks}
+          onReorderSoundtracks={reorderLibrarySoundtracks}
+          onReorderStoryItems={(ids) => reorderItems("story", ids)}
+          onReorderLeitmotifs={(ids) => reorderItems("motifs", ids)}
           active={active}
           detail={detail}
           section={section}
@@ -871,6 +999,7 @@ function App() {
           canDelete={canDelete}
           onQueryChange={setQuery}
           onOpenSoundtrack={(item) => {
+            setProfileReturnId(null);
             setProfileViewId(null);
             setActiveId(item.id);
             setSection("story");
@@ -884,6 +1013,10 @@ function App() {
             setActiveId(null);
             setDetail(null);
             setDetailHistory([]);
+            if (profileReturnId) {
+              setProfileViewId(profileReturnId);
+              setProfileReturnId(null);
+            }
           }}
           onBackFromEntity={goBackFromEntity}
           backLabel={detailHistory[detailHistory.length - 1]?.entity.name || active?.name || "soundtrack"}
@@ -1161,11 +1294,7 @@ function ModalView({
   const [notationUrl, setNotationUrl] = useState(
     editing && "notationUrl" in editing ? editing.notationUrl : "",
   );
-  const nextTrackNumber =
-    (active?.tracks.reduce(
-      (highest, track) => Math.max(highest, track.trackNumber ?? 0),
-      0,
-    ) || 0) + 1;
+  const nextTrackNumber = (active?.tracks.length || 0) + 1;
   const [trackNumber, setTrackNumber] = useState(
     editing && "trackNumber" in editing
       ? String(editing.trackNumber ?? "")
@@ -1176,7 +1305,7 @@ function ModalView({
   const [trackComposers, setTrackComposers] = useState(
     editing && "composers" in editing && !("ownerId" in editing)
       ? editing.composers.join(", ")
-      : "",
+      : active?.composers.join(", ") || "",
   );
   const [trackLink, setTrackLink] = useState(
     editing && "listeningUrl" in editing && !("ownerId" in editing)

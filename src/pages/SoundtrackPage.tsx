@@ -37,6 +37,9 @@ interface SoundtrackPageProps {
   onDeleteEntity: (section: SoundtrackSection, id: string) => void;
   onAddEntity: (section: SoundtrackSection) => void;
   onOpenProfile: (userId: string) => void;
+  onReorderTracks: (orderedTrackIds: string[]) => void;
+  onReorderStoryItems: (orderedStoryItemIds: string[]) => void;
+  onReorderLeitmotifs: (orderedLeitmotifIds: string[]) => void;
 }
 
 const sectionHeading: Record<
@@ -82,6 +85,9 @@ export default function SoundtrackPage({
   onDeleteEntity,
   onAddEntity,
   onOpenProfile,
+  onReorderTracks,
+  onReorderStoryItems,
+  onReorderLeitmotifs,
 }: SoundtrackPageProps) {
   const heading = sectionHeading[section];
 
@@ -97,7 +103,7 @@ export default function SoundtrackPage({
           <div className="orb orb-two" />
           <div className="hero-lines" />
           <AudioLines size={37} />
-          <span>SOUNDTRACK STUDY</span>
+          <span>SOUNDTRACK</span>
         </div>
         <div className="hero-info">
           <div className="eyebrow">
@@ -184,7 +190,7 @@ export default function SoundtrackPage({
           className={section === "story" ? "active" : ""}
           onClick={() => onChangeSection("story")}
         >
-          <BookOpen size={16} /> Story view{" "}
+          <BookOpen size={16} /> Story Items{" "}
           <span>{soundtrack.storyItems.length}</span>
         </button>
         <button
@@ -227,6 +233,7 @@ export default function SoundtrackPage({
             onEdit={(entity) => onEditEntity("story", entity)}
             onDelete={(id) => onDeleteEntity("story", id)}
             onAdd={() => onAddEntity("story")}
+            onReorder={onReorderStoryItems}
           />
         )}
         {section === "motifs" && (
@@ -237,6 +244,7 @@ export default function SoundtrackPage({
             onEdit={(entity) => onEditEntity("motifs", entity)}
             onDelete={(id) => onDeleteEntity("motifs", id)}
             onAdd={() => onAddEntity("motifs")}
+            onReorder={onReorderLeitmotifs}
           />
         )}
         {section === "tracks" && (
@@ -247,6 +255,7 @@ export default function SoundtrackPage({
             onEdit={(entity) => onEditEntity("tracks", entity)}
             onDelete={(id) => onDeleteEntity("tracks", id)}
             onAdd={() => onAddEntity("tracks")}
+            onReorder={onReorderTracks}
           />
         )}
       </section>

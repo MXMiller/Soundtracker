@@ -51,6 +51,10 @@ export interface AppPageRouterProps {
   onAddEntity: (section: SoundtrackSection) => void;
   currentUserId: string;
   onOpenProfile: (userId: string) => void;
+  onReorderTracks: (orderedTrackIds: string[]) => void;
+  onReorderSoundtracks: (orderedSoundtrackIds: string[]) => void;
+  onReorderStoryItems: (orderedStoryItemIds: string[]) => void;
+  onReorderLeitmotifs: (orderedLeitmotifIds: string[]) => void;
 }
 
 export default function AppPageRouter(props: AppPageRouterProps) {
@@ -62,6 +66,7 @@ export default function AppPageRouter(props: AppPageRouterProps) {
     isMine: props.isMine,
     currentUserId: props.currentUserId,
     onOpenProfile: props.onOpenProfile,
+    onReorderSoundtracks: props.onReorderSoundtracks,
     onQueryChange: props.onQueryChange,
     onOpen: props.onOpenSoundtrack,
     onFavorite: props.onFavorite,
@@ -133,6 +138,9 @@ export default function AppPageRouter(props: AppPageRouterProps) {
       onDeleteEntity={props.onDeleteEntity}
       onAddEntity={props.onAddEntity}
       onOpenProfile={props.onOpenProfile}
+      onReorderTracks={props.onReorderTracks}
+      onReorderStoryItems={props.onReorderStoryItems}
+      onReorderLeitmotifs={props.onReorderLeitmotifs}
     />
   );
 }

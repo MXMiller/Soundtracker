@@ -1,4 +1,5 @@
 import { Plus, Sparkles } from "lucide-react";
+import { useState } from "react";
 import { TrackCard } from "../components/EntityCards";
 import type { Soundtrack, Track } from "../types";
 
@@ -9,6 +10,7 @@ interface TracksPageProps {
   onEdit: (item: Track) => void;
   onDelete: (id: string) => void;
   onAdd: () => void;
+  onReorder: (orderedTrackIds: string[]) => void;
 }
 
 export default function TracksPage({
@@ -18,12 +20,31 @@ export default function TracksPage({
   onEdit,
   onDelete,
   onAdd,
+  onReorder,
 }: TracksPageProps) {
+  const [draggedTrackId, setDraggedTrackId] = useState<string | null>(null);
+  const [dropTargetId, setDropTargetId] = useState<string | null>(null);
   const sortedTracks = [...soundtrack.tracks].sort((first, second) => {
     if (first.trackNumber === null) return second.trackNumber === null ? 0 : 1;
     if (second.trackNumber === null) return -1;
     return first.trackNumber - second.trackNumber;
   });
+
+  function dropTrack(event: React.DragEvent<HTMLElement>, targetId: string) {
+    event.preventDefault();
+    event.stopPropagation();
+    const sourceId = event.dataTransfer.getData("text/plain") || draggedTrackId;
+    if (!sourceId || sourceId === targetId) return;
+    const ids = sortedTracks.map((track) => track.id);
+    const sourceIndex = ids.indexOf(sourceId);
+    const targetIndex = ids.indexOf(targetId);
+    if (sourceIndex < 0 || targetIndex < 0) return;
+    ids.splice(sourceIndex, 1);
+    ids.splice(targetIndex, 0, sourceId);
+    onReorder(ids);
+    setDraggedTrackId(null);
+    setDropTargetId(null);
+  }
 
   if (soundtrack.tracks.length === 0) {
     return (
@@ -56,6 +77,24 @@ export default function TracksPage({
           onOpen={() => onOpen(item)}
           onEdit={() => onEdit(item)}
           onDelete={() => onDelete(item.id)}
+          onDragStart={(event) => {
+            setDraggedTrackId(item.id);
+            event.dataTransfer.effectAllowed = "move";
+            event.dataTransfer.setData("text/plain", item.id);
+          }}
+          onDragOver={(event) => {
+            if (!canEdit) return;
+            event.preventDefault();
+            event.dataTransfer.dropEffect = "move";
+            setDropTargetId(item.id);
+          }}
+          onDrop={(event) => dropTrack(event, item.id)}
+          onDragEnd={() => {
+            setDraggedTrackId(null);
+            setDropTargetId(null);
+          }}
+          isDragging={draggedTrackId === item.id}
+          isDropTarget={dropTargetId === item.id && draggedTrackId !== item.id}
         />
       ))}
     </>

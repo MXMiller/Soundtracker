@@ -57,6 +57,8 @@ export interface Soundtrack {
   ownerName: string
   name: string
   nameColor?: string
+  libraryOrder?: number
+  userLibraryOrder?: number
   composers: string[]
   description: string
   listeningUrl: string
