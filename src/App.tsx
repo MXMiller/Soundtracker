@@ -257,7 +257,16 @@ function App() {
     name: profiles.find((profile) => profile.id === session?.user.id)?.username
       || String(session?.user.user_metadata.username || session?.user.email?.split("@")[0] || "Soundtracker user"),
   };
-  const viewedProfile = profiles.find((profile) => profile.id === profileViewId) || null;
+  const currentProfile = profiles.find((profile) => profile.id === currentUser.id) || {
+    id: currentUser.id,
+    username: currentUser.name,
+    description: null,
+    profile_image_file_path: null,
+  };
+  const viewedProfile = profileViewId
+    ? profiles.find((profile) => profile.id === profileViewId)
+      || (profileViewId === currentUser.id ? currentProfile : null)
+    : null;
   const active = soundtracks.find((item) => item.id === activeId) || null;
   const appearanceTrack = appearanceEditor
     ? soundtracks
@@ -333,6 +342,12 @@ function App() {
         target: "current",
       });
     }
+  } else if (profileViewId && viewedProfile) {
+    breadcrumbItems.push({
+      label: `${viewedProfile.username}'s profile`,
+      kind: "current",
+      target: "current",
+    });
   } else {
     breadcrumbItems.push({ label: navTitle(page), kind: "current", target: "current" });
   }
@@ -461,6 +476,8 @@ function App() {
         tracks: [],
       };
       setSoundtracks((all) => [...all, item]);
+      setProfileViewId(null);
+      setProfileReturnId(null);
       setActiveId(item.id);
       setSection("story");
       setPage("library");
@@ -783,10 +800,7 @@ function App() {
 
   function navigateBreadcrumb(item: BreadcrumbItem) {
     if (item.target === "workspace") {
-      setPage("library");
-      setActiveId(null);
-      setDetail(null);
-      setDetailHistory([]);
+      openWorkspacePage("library");
       setSection("story");
       return;
     }
@@ -813,12 +827,34 @@ function App() {
 
   function openCreatedItem() {
     if (!createdItemNotice) return;
+    setProfileViewId(null);
+    setProfileReturnId(null);
     setActiveId(createdItemNotice.soundtrackId);
     setPage("library");
     setSection(sectionForEntity(createdItemNotice.entity));
     setDetail(createdItemNotice.entity);
     setDetailHistory([]);
     setCreatedItemNotice(null);
+  }
+
+  function openProfile(userId: string) {
+    setProfileReturnId(null);
+    setProfileViewId(userId);
+    setPage(userId === currentUser.id ? "library" : "explore");
+    setActiveId(null);
+    setDetail(null);
+    setDetailHistory([]);
+    setMobileNav(false);
+  }
+
+  function openWorkspacePage(nextPage: Page) {
+    setProfileViewId(null);
+    setProfileReturnId(null);
+    setPage(nextPage);
+    setActiveId(null);
+    setDetail(null);
+    setDetailHistory([]);
+    setMobileNav(false);
   }
 
   if (!authReady) return <div className="auth-screen"><div className="auth-card">Connecting to Soundtracker…</div></div>;
@@ -851,14 +887,8 @@ function App() {
         <div className="nav-label">WORKSPACE</div>
         <nav className="side-nav">
           <button
-            className={page === "library" && !active ? "selected" : ""}
-            onClick={() => {
-              setProfileViewId(null);
-              setProfileReturnId(null);
-              setPage("library");
-              setActiveId(null);
-              setMobileNav(false);
-            }}
+            className={page === "library" && !active && !profileViewId ? "selected" : ""}
+            onClick={() => openWorkspacePage("library")}
           >
             <Layers3 size={17} /> My library{" "}
             <span className="nav-count">
@@ -866,38 +896,20 @@ function App() {
             </span>
           </button>
           <button
-            className={page === "explore" ? "selected" : ""}
-            onClick={() => {
-              setProfileViewId(null);
-              setProfileReturnId(null);
-              setPage("explore");
-              setActiveId(null);
-              setMobileNav(false);
-            }}
+            className={page === "explore" && !profileViewId ? "selected" : ""}
+            onClick={() => openWorkspacePage("explore")}
           >
             <Globe2 size={17} /> Explore
           </button>
           <button
-            className={page === "favorites" ? "selected" : ""}
-            onClick={() => {
-              setProfileViewId(null);
-              setProfileReturnId(null);
-              setPage("favorites");
-              setActiveId(null);
-              setMobileNav(false);
-            }}
+            className={page === "favorites" && !profileViewId ? "selected" : ""}
+            onClick={() => openWorkspacePage("favorites")}
           >
             <Heart size={17} /> Favorites
           </button>
           <button
-            className={page === "shared" ? "selected" : ""}
-            onClick={() => {
-              setProfileViewId(null);
-              setProfileReturnId(null);
-              setPage("shared");
-              setActiveId(null);
-              setMobileNav(false);
-            }}
+            className={page === "shared" && !profileViewId ? "selected" : ""}
+            onClick={() => openWorkspacePage("shared")}
           >
             <Share2 size={17} /> Shared with me
           </button>
@@ -909,7 +921,7 @@ function App() {
           <ChevronRight size={15} />
         </div>
         <div className="account">
-          <button className="account-profile" onClick={() => { setProfileReturnId(null); setProfileViewId(currentUser.id); }}>
+          <button className="account-profile" onClick={() => openProfile(currentUser.id)}>
             <div className="avatar">{currentUser.name.slice(0, 2).toUpperCase()}</div>
             <span className="account-copy">
               <strong>{currentUser.name}</strong>
@@ -954,13 +966,13 @@ function App() {
             })}
           </div>
           <div className="top-actions">
-            <button className="avatar top-avatar" title="View profile" onClick={() => { setProfileReturnId(null); setProfileViewId(currentUser.id); }}>
+            <button className="avatar top-avatar" title="View profile" onClick={() => openProfile(currentUser.id)}>
               {currentUser.name.slice(0, 2).toUpperCase()}
             </button>
           </div>
         </header>
 
-        {profileViewId && viewedProfile ? (
+        {profileViewId ? viewedProfile ? (
           <ProfilePage
             profile={viewedProfile}
             isOwnProfile={profileViewId === currentUser.id}
@@ -979,10 +991,10 @@ function App() {
             onFavorite={toggleFavorite}
             favoriteIds={favoriteIds}
           />
-        ) : <AppPageRouter
+        ) : <div className="content profile-loading">Loading profile…</div> : <AppPageRouter
           page={page}
           currentUserId={currentUser.id}
-          onOpenProfile={(userId) => { setProfileReturnId(null); setProfileViewId(userId); setActiveId(null); setDetail(null); }}
+          onOpenProfile={openProfile}
           onReorderTracks={reorderTracks}
           onReorderSoundtracks={reorderLibrarySoundtracks}
           onReorderStoryItems={(ids) => reorderItems("story", ids)}
