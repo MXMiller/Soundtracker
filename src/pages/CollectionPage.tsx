@@ -8,7 +8,6 @@ import {
   Search,
   Share2,
 } from "lucide-react";
-import { currentUser } from "../data";
 import type { Soundtrack, ViewPage } from "../types";
 import { PageSearch, SoundtrackCard } from "../components/EntityCards";
 
@@ -19,11 +18,13 @@ export interface CollectionPageProps {
   favoriteIds: string[];
   query: string;
   isMine: (item: Soundtrack) => boolean;
+  currentUserId: string;
   onQueryChange: (value: string) => void;
   onOpen: (item: Soundtrack) => void;
   onFavorite: (item: Soundtrack) => void;
   onCreate: () => void;
   onImport: () => void;
+  onOpenProfile: (userId: string) => void;
 }
 
 const pageCopy: Record<ViewPage, { title: string; description: string }> = {
@@ -59,19 +60,21 @@ export function CollectionPage({
   favoriteIds,
   query,
   isMine,
+  currentUserId,
   onQueryChange,
   onOpen,
   onFavorite,
   onCreate,
   onImport,
+  onOpenProfile,
 }: CollectionPageProps) {
   const copy = pageCopy[page];
   const sharedCount = useMemo(
     () =>
       soundtracks.filter(
-        (item) => item.collaborators[currentUser.id] && !isMine(item),
+        (item) => item.collaborators[currentUserId] && !isMine(item),
       ).length,
-    [isMine, soundtracks],
+    [currentUserId, isMine, soundtracks],
   );
 
   return (
@@ -151,6 +154,7 @@ export function CollectionPage({
               isFavorite={favoriteIds.includes(item.id)}
               onOpen={() => onOpen(item)}
               onFavorite={() => onFavorite(item)}
+              onOpenProfile={onOpenProfile}
             />
           ))}
         </div>

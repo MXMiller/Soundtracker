@@ -28,6 +28,7 @@ export function EntityDetailContent({
   canEdit,
   onBack,
   backLabel,
+  backLabelColor,
   onEdit,
   onDelete,
   onNavigate,
@@ -39,6 +40,7 @@ export function EntityDetailContent({
   canEdit: boolean;
   onBack: () => void;
   backLabel: string;
+  backLabelColor?: string;
   onEdit: () => void;
   onDelete: () => void;
   onNavigate: (entity: Entity) => void;
@@ -91,7 +93,7 @@ export function EntityDetailContent({
   return (
     <div className="content entity-page">
       <button className="back-link" onClick={onBack}>
-        <ArrowLeft size={15} /> Back to {backLabel}
+        <ArrowLeft size={15} /> Back to <span style={{ color: backLabelColor }}>{backLabel}</span>
       </button>
       <section className="entity-page-hero">
         <div

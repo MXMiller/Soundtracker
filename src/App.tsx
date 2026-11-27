@@ -8,15 +8,14 @@ import {
   Globe2,
   Heart,
   Layers3,
+  LogOut,
   Menu,
-  MoreHorizontal,
   Plus,
   Share2,
   Trash2,
   Upload,
   X,
 } from "lucide-react";
-import { currentUser, demoPeople } from "./data";
 import type {
   Leitmotif,
   ModalType,
@@ -32,11 +31,14 @@ import type {
 } from "./types";
 import AppPageRouter from "./pages/AppPageRouter";
 import {
-  STORE_KEY,
   getTrackMotifAppearances,
-  loadData,
   parseMarkdown,
 } from "./utils";
+import AuthPage, { type AuthCredentials } from "./components/AuthPage";
+import ProfilePage from "./pages/ProfilePage";
+import { supabase } from "./lib/supabase";
+import type { UserProfile } from "./types/supabase";
+import type { Session } from "@supabase/supabase-js";
 
 type Section = SoundtrackSection;
 type Page = ViewPage;
@@ -58,7 +60,13 @@ type CreatedItemNotice = {
 const uid = () => `st-${Math.random().toString(36).slice(2, 9)}`;
 
 function App() {
-  const [soundtracks, setSoundtracks] = useState<Soundtrack[]>(loadData);
+  const [soundtracks, setSoundtracks] = useState<Soundtrack[]>([]);
+  const [session, setSession] = useState<Session | null>(null);
+  const [authReady, setAuthReady] = useState(false);
+  const [dataReady, setDataReady] = useState(false);
+  const [authMessage, setAuthMessage] = useState("");
+  const [profiles, setProfiles] = useState<UserProfile[]>([]);
+  const [profileViewId, setProfileViewId] = useState<string | null>(null);
   const [page, setPage] = useState<Page>("library");
   const [activeId, setActiveId] = useState<string | null>(null);
   const [section, setSection] = useState<Section>("story");
@@ -95,28 +103,94 @@ function App() {
   const [createdItemNotice, setCreatedItemNotice] =
     useState<CreatedItemNotice | null>(null);
   const [mobileNav, setMobileNav] = useState(false);
-  const [favoriteIds, setFavoriteIds] = useState<string[]>(() => {
-    try {
-      return JSON.parse(
-        localStorage.getItem("soundtracker-favorites") || "[]",
-      ) as string[];
-    } catch {
-      return [];
-    }
-  });
+  const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
-  useEffect(
-    () => localStorage.setItem(STORE_KEY, JSON.stringify(soundtracks)),
-    [soundtracks],
-  );
-  useEffect(
-    () =>
-      localStorage.setItem(
-        "soundtracker-favorites",
-        JSON.stringify(favoriteIds),
-      ),
-    [favoriteIds],
-  );
+  useEffect(() => {
+    let cancelled = false;
+    supabase.auth.getSession().then(({ data }) => {
+      if (!cancelled) {
+        setSession(data.session);
+        setAuthReady(true);
+      }
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      setSession(nextSession);
+      setAuthReady(true);
+      setProfileViewId(null);
+    });
+    return () => { cancelled = true; subscription.unsubscribe(); };
+  }, []);
+
+  useEffect(() => {
+    if (!session?.user.id) {
+      setSoundtracks([]);
+      setProfiles([]);
+      setFavoriteIds([]);
+      setDataReady(false);
+      return;
+    }
+    let cancelled = false;
+    const userId = session.user.id;
+    setDataReady(false);
+    Promise.all([
+      supabase.from("soundtracker_soundtrack_documents").select("id, owner_id, owner_name, name, visibility, payload, updated_at"),
+      supabase.from("public_profiles").select("id, username, description, profile_image_file_path"),
+      supabase.from("soundtracker_favorites").select("soundtrack_id").eq("user_id", userId),
+      supabase.from("profiles").select("id, username, description, profile_image_file_path").eq("id", userId).maybeSingle(),
+      supabase.from("soundtracker_document_access").select("soundtrack_id, user_id, permission"),
+    ]).then(([docsResult, profilesResult, favoritesResult, ownProfileResult, accessResult]) => {
+      if (cancelled) return;
+      if (docsResult.error) setAuthMessage(`Could not load soundtrack data: ${docsResult.error.message}`);
+      const loadedProfiles = (profilesResult.data || []) as UserProfile[];
+      if (ownProfileResult.data && !loadedProfiles.some((profile) => profile.id === userId)) {
+        loadedProfiles.push(ownProfileResult.data as UserProfile);
+      }
+      setProfiles(loadedProfiles);
+      const profileNames = new Map(loadedProfiles.map((profile) => [profile.id, profile.username]));
+      const accessBySoundtrack = new Map<string, Record<string, "view" | "edit">>();
+      (accessResult.data || []).forEach((grant) => {
+        const access = accessBySoundtrack.get(grant.soundtrack_id) || {};
+        access[grant.user_id] = grant.permission;
+        accessBySoundtrack.set(grant.soundtrack_id, access);
+      });
+      setSoundtracks(((docsResult.data || []) as Array<{ id: string; owner_id: string; owner_name: string; name: string; visibility: Soundtrack["visibility"]; payload: Soundtrack; updated_at: string }>).map((row) => ({
+        ...row.payload,
+        id: row.id,
+        ownerId: row.owner_id,
+        ownerName: profileNames.get(row.owner_id) || row.owner_name,
+        name: row.name,
+        visibility: row.visibility,
+        updatedAt: row.updated_at,
+        collaborators: accessBySoundtrack.get(row.id) || {},
+      })));
+      if (favoritesResult.error) setAuthMessage(`Could not load favorites: ${favoritesResult.error.message}`);
+      setFavoriteIds((favoritesResult.data || []).map((row) => row.soundtrack_id));
+      setDataReady(true);
+    }).catch((error: unknown) => {
+      if (!cancelled) {
+        setAuthMessage(error instanceof Error ? error.message : "Could not connect to Supabase.");
+        setDataReady(true);
+      }
+    });
+    return () => { cancelled = true; };
+  }, [session?.user.id]);
+
+  useEffect(() => {
+    if (!session?.user.id || !dataReady) return;
+    const rows = soundtracks.map((item) => ({
+      id: item.id,
+      owner_id: item.ownerId,
+      owner_name: item.ownerName,
+      name: item.name,
+      visibility: item.visibility,
+      payload: item,
+      created_at: item.createdAt,
+      updated_at: item.updatedAt,
+    }));
+    if (rows.length) supabase.from("soundtracker_soundtrack_documents").upsert(rows).then(({ error }) => {
+      if (error) setAuthMessage(`Could not save soundtrack changes: ${error.message}`);
+    });
+  }, [soundtracks, session?.user.id, dataReady]);
   useEffect(
     () =>
       localStorage.setItem(
@@ -136,6 +210,12 @@ function App() {
     return () => clearTimeout(id);
   }, [createdItemNotice]);
 
+  const currentUser = {
+    id: session?.user.id || "",
+    name: profiles.find((profile) => profile.id === session?.user.id)?.username
+      || String(session?.user.user_metadata.username || session?.user.email?.split("@")[0] || "Soundtracker user"),
+  };
+  const viewedProfile = profiles.find((profile) => profile.id === profileViewId) || null;
   const active = soundtracks.find((item) => item.id === activeId) || null;
   const appearanceTrack = appearanceEditor
     ? soundtracks
@@ -289,6 +369,7 @@ function App() {
         ownerId: currentUser.id,
         ownerName: currentUser.name,
         name: values.name || "Untitled soundtrack",
+        nameColor: values.nameColor,
         composers: values.composers || [],
         description: values.description || "",
         listeningUrl: values.listeningUrl || "",
@@ -468,19 +549,26 @@ function App() {
     )
       return;
     setSoundtracks((all) => all.filter((st) => st.id !== item.id));
+    supabase.from("soundtracker_soundtrack_documents").delete().eq("id", item.id).then(({ error }) => {
+      if (error) setAuthMessage(`Could not delete soundtrack: ${error.message}`);
+    });
     setActiveId(null);
     setDetail(null);
     setDetailHistory([]);
     showToast("Soundtrack deleted");
   }
-  function toggleFavorite(item: Soundtrack) {
-    setFavoriteIds((ids) =>
-      ids.includes(item.id)
-        ? ids.filter((id) => id !== item.id)
-        : [...ids, item.id],
-    );
+  async function toggleFavorite(item: Soundtrack) {
+    const wasFavorite = favoriteIds.includes(item.id);
+    const result = wasFavorite
+      ? await supabase.from("soundtracker_favorites").delete().eq("user_id", currentUser.id).eq("soundtrack_id", item.id)
+      : await supabase.from("soundtracker_favorites").upsert({ user_id: currentUser.id, soundtrack_id: item.id });
+    if (result.error) {
+      setAuthMessage(`Could not update favorites: ${result.error.message}`);
+      return;
+    }
+    setFavoriteIds((ids) => wasFavorite ? ids.filter((id) => id !== item.id) : [...ids, item.id]);
     showToast(
-      favoriteIds.includes(item.id)
+      wasFavorite
         ? "Removed from favorites"
         : "Added to favorites",
     );
@@ -490,7 +578,7 @@ function App() {
     const reader = new FileReader();
     reader.onload = () => {
       try {
-        const imported = parseMarkdown(String(reader.result));
+        const imported = { ...parseMarkdown(String(reader.result)), ownerId: currentUser.id, ownerName: currentUser.name };
         setSoundtracks((all) => [imported, ...all]);
         setActiveId(imported.id);
         setDetail(null);
@@ -509,6 +597,34 @@ function App() {
   }
   function importButton() {
     fileRef.current?.click();
+  }
+
+  async function signIn(values: AuthCredentials) {
+    const { error } = await supabase.auth.signInWithPassword({ email: values.email, password: values.password });
+    return error?.message || null;
+  }
+
+  async function signUp(values: AuthCredentials) {
+    const { error } = await supabase.auth.signUp({
+      email: values.email,
+      password: values.password,
+      options: { data: { username: values.username?.trim() } },
+    });
+    return error?.message || null;
+  }
+
+  async function saveProfile(values: { username: string; description: string }) {
+    const { data, error } = await supabase.from("profiles")
+      .update({ username: values.username.trim(), description: values.description.trim() || null })
+      .eq("id", currentUser.id)
+      .select("id, username, description, profile_image_file_path")
+      .single();
+    if (error) {
+      setAuthMessage(`Could not save profile: ${error.message}`);
+      throw error;
+    }
+    setProfiles((all) => all.map((profile) => profile.id === currentUser.id ? data as UserProfile : profile));
+    setSoundtracks((all) => all.map((item) => item.ownerId === currentUser.id ? { ...item, ownerName: values.username.trim() } : item));
   }
   function editCurrentEntity(kind: Section, entity: Entity) {
     openModal(
@@ -591,6 +707,9 @@ function App() {
     setCreatedItemNotice(null);
   }
 
+  if (!authReady) return <div className="auth-screen"><div className="auth-card">Connecting to Soundtracker…</div></div>;
+  if (!session) return <AuthPage onSignIn={signIn} onSignUp={signUp} />;
+
   return (
     <div className="app-shell">
       <aside className={`sidebar ${mobileNav ? "sidebar-open" : ""}`}>
@@ -668,13 +787,15 @@ function App() {
           <ChevronRight size={15} />
         </div>
         <div className="account">
-          <div className="avatar">JC</div>
-          <div className="account-copy">
-            <strong>Jamie Chen</strong>
-            <span>Free workspace</span>
-          </div>
-          <button className="icon-button" aria-label="Account menu">
-            <MoreHorizontal size={19} />
+          <button className="account-profile" onClick={() => setProfileViewId(currentUser.id)}>
+            <div className="avatar">{currentUser.name.slice(0, 2).toUpperCase()}</div>
+            <span className="account-copy">
+              <strong>{currentUser.name}</strong>
+              <span>View profile</span>
+            </span>
+          </button>
+          <button className="icon-button" aria-label="Log out" title="Log out" onClick={() => supabase.auth.signOut()}>
+            <LogOut size={17} />
           </button>
         </div>
       </aside>
@@ -711,14 +832,33 @@ function App() {
             })}
           </div>
           <div className="top-actions">
-            <button className="avatar top-avatar" title="Jamie Chen">
-              JC
+            <button className="avatar top-avatar" title="View profile" onClick={() => setProfileViewId(currentUser.id)}>
+              {currentUser.name.slice(0, 2).toUpperCase()}
             </button>
           </div>
         </header>
 
-        <AppPageRouter
+        {profileViewId && viewedProfile ? (
+          <ProfilePage
+            profile={viewedProfile}
+            isOwnProfile={profileViewId === currentUser.id}
+            soundtracks={soundtracks.filter((item) => item.ownerId === profileViewId && (profileViewId === currentUser.id || item.visibility !== "private"))}
+            onBack={() => setProfileViewId(null)}
+            onSave={saveProfile}
+            onOpenSoundtrack={(item) => {
+              setProfileViewId(null);
+              setActiveId(item.id);
+              setPage("explore");
+              setSection("story");
+              setDetail(null);
+            }}
+            onFavorite={toggleFavorite}
+            favoriteIds={favoriteIds}
+          />
+        ) : <AppPageRouter
           page={page}
+          currentUserId={currentUser.id}
+          onOpenProfile={(userId) => { setProfileViewId(userId); setActiveId(null); setDetail(null); }}
           active={active}
           detail={detail}
           section={section}
@@ -731,6 +871,7 @@ function App() {
           canDelete={canDelete}
           onQueryChange={setQuery}
           onOpenSoundtrack={(item) => {
+            setProfileViewId(null);
             setActiveId(item.id);
             setSection("story");
             setDetail(null);
@@ -746,6 +887,7 @@ function App() {
           }}
           onBackFromEntity={goBackFromEntity}
           backLabel={detailHistory[detailHistory.length - 1]?.entity.name || active?.name || "soundtrack"}
+          backLabelColor={detailHistory[detailHistory.length - 1]?.entity.nameColor || active?.nameColor}
           onToggleFavorite={toggleFavorite}
           onEditSoundtrack={(item) => openModal("soundtrack", item)}
           onShare={() => openModal("share")}
@@ -773,7 +915,7 @@ function App() {
                   : "track",
             )
           }
-        />
+        />}
       </main>
       <input
         ref={fileRef}
@@ -793,10 +935,26 @@ function App() {
           }}
           onSaveSoundtrack={saveSoundtrack}
           onSaveEntity={saveEntity}
+          profiles={profiles.filter((profile) => profile.id !== currentUser.id)}
           onImport={onImportFile}
           onPickImport={importButton}
-          onShare={(collaborators) => {
-            if (active) patchActive((item) => ({ ...item, collaborators }));
+          onShare={async (collaborators) => {
+            if (!active) return;
+            const existing = Object.keys(active.collaborators || {});
+            const nextIds = Object.keys(collaborators);
+            const removals = existing.filter((id) => !nextIds.includes(id));
+            const updates = nextIds.map((userId) => ({ soundtrack_id: active.id, user_id: userId, permission: collaborators[userId], granted_by: currentUser.id }));
+            const removed = removals.length
+              ? await supabase.from("soundtracker_document_access").delete().eq("soundtrack_id", active.id).in("user_id", removals)
+              : { error: null };
+            const saved = updates.length
+              ? await supabase.from("soundtracker_document_access").upsert(updates)
+              : { error: null };
+            if (removed.error || saved.error) {
+              setAuthMessage(`Could not update sharing access: ${(removed.error || saved.error)?.message}`);
+              return;
+            }
+            patchActive((item) => ({ ...item, collaborators }));
             setModal(null);
             showToast("Sharing access updated");
           }}
@@ -856,6 +1014,7 @@ function App() {
           {toast}
         </div>
       ) : null}
+      {authMessage && <button className="toast auth-toast" onClick={() => setAuthMessage("")}>{authMessage}<X size={14} /></button>}
     </div>
   );
 }
@@ -946,6 +1105,7 @@ function ModalView({
   onSaveSoundtrack,
   onSaveEntity,
   onShare,
+  profiles,
 }: {
   modal: Exclude<Modal, null>;
   editing: Entity | Soundtrack | null;
@@ -959,6 +1119,7 @@ function ModalView({
   onImport: (file?: File) => void;
   onPickImport: () => void;
   onShare: (users: Record<string, "view" | "edit">) => void;
+  profiles: UserProfile[];
 }) {
   const soundtrackEditing =
     modal === "soundtrack" && editing && "ownerId" in editing
@@ -1193,7 +1354,7 @@ function ModalView({
                 />
               </Field>
               <Field label="Name color">
-                <input type="color" value={nameColor || "#222222"} defaultValue="#222222" onChange={(e) => setNameColor(e.target.value)} />
+                <input type="color" value={nameColor || "#222222"} onChange={(e) => setNameColor(e.target.value)} />
               </Field>
               <Field label="Composer(s)" hint="Separate names with commas">
                 <input
@@ -1454,21 +1615,16 @@ function ModalView({
                 Give specific people access to your private soundtrack. Owners
                 always keep full control.
               </p>
-              {demoPeople.map((person, i) => {
-                const key = `u-${person.split(" ")[0].toLowerCase()}`;
+              {profiles.map((person, i) => {
+                const key = person.id;
                 return (
-                  <div className="share-person" key={person}>
+                  <div className="share-person" key={person.id}>
                     <div className={`avatar person-${i}`}>
-                      {person
-                        .split(" ")
-                        .map((x) => x[0])
-                        .join("")}
+                      {person.username.slice(0, 2).toUpperCase()}
                     </div>
                     <div>
-                      <strong>{person}</strong>
-                      <small>
-                        {person.split(" ")[0].toLowerCase()}@example.com
-                      </small>
+                      <strong>{person.username}</strong>
+                      <small>Soundtracker user</small>
                     </div>
                     <select
                       aria-label={`Permission for ${person}`}
@@ -1490,8 +1646,7 @@ function ModalView({
                 );
               })}
               <p className="field-note">
-                Demo access is stored locally in this browser. Real invitations
-                require an account backend.
+                People you select can access this soundtrack after signing in.
               </p>
             </>
           )}

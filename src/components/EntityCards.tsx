@@ -71,6 +71,7 @@ export function SoundtrackCard({
   isFavorite,
   onOpen,
   onFavorite,
+  onOpenProfile,
 }: {
   item: Soundtrack;
   index: number;
@@ -78,6 +79,7 @@ export function SoundtrackCard({
   isFavorite: boolean;
   onOpen: () => void;
   onFavorite: () => void;
+  onOpenProfile?: (ownerId: string) => void;
 }) {
   return (
     <article className="soundtrack-card">
@@ -127,7 +129,7 @@ export function SoundtrackCard({
           Written by: {item.composers.join(", ") || "Unknown composer"}
           {!isMine && (
             <>
-              <span>·</span> Shared by {item.ownerName}
+              <span>·</span> Shared by <button className="inline-profile-link" onClick={() => onOpenProfile?.(item.ownerId)}>{item.ownerName}</button>
             </>
           )}
         </div>

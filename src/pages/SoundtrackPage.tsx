@@ -36,6 +36,7 @@ interface SoundtrackPageProps {
   onEditEntity: (section: SoundtrackSection, entity: SoundtrackEntity) => void;
   onDeleteEntity: (section: SoundtrackSection, id: string) => void;
   onAddEntity: (section: SoundtrackSection) => void;
+  onOpenProfile: (userId: string) => void;
 }
 
 const sectionHeading: Record<
@@ -80,6 +81,7 @@ export default function SoundtrackPage({
   onEditEntity,
   onDeleteEntity,
   onAddEntity,
+  onOpenProfile,
 }: SoundtrackPageProps) {
   const heading = sectionHeading[section];
 
@@ -101,7 +103,7 @@ export default function SoundtrackPage({
           <div className="eyebrow">
             <span className={`visibility-dot ${soundtrack.visibility}`} />
             {soundtrack.visibility} soundtrack{" "}
-            <span className="separator">·</span> by {soundtrack.ownerName}
+            <span className="separator">·</span> by <button className="inline-profile-link" onClick={() => onOpenProfile(soundtrack.ownerId)}>{soundtrack.ownerName}</button>
           </div>
           <h1 style={{ color: soundtrack.nameColor }}>{soundtrack.name}</h1>
           <div className="hero-composers">

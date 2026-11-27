@@ -37,6 +37,7 @@ export interface AppPageRouterProps {
   onBackToList: () => void;
   onBackFromEntity: () => void;
   backLabel: string;
+  backLabelColor?: string;
   onToggleFavorite: (item: Soundtrack) => void;
   onEditSoundtrack: (item: Soundtrack) => void;
   onShare: () => void;
@@ -48,6 +49,8 @@ export interface AppPageRouterProps {
   onEditTrackMotif: (motifId: string) => void;
   onDeleteEntity: (section: SoundtrackSection, id: string) => void;
   onAddEntity: (section: SoundtrackSection) => void;
+  currentUserId: string;
+  onOpenProfile: (userId: string) => void;
 }
 
 export default function AppPageRouter(props: AppPageRouterProps) {
@@ -57,6 +60,8 @@ export default function AppPageRouter(props: AppPageRouterProps) {
     favoriteIds: props.favoriteIds,
     query: props.query,
     isMine: props.isMine,
+    currentUserId: props.currentUserId,
+    onOpenProfile: props.onOpenProfile,
     onQueryChange: props.onQueryChange,
     onOpen: props.onOpenSoundtrack,
     onFavorite: props.onFavorite,
@@ -85,6 +90,7 @@ export default function AppPageRouter(props: AppPageRouterProps) {
       canEdit,
       onBack: props.onBackFromEntity,
       backLabel: props.backLabel,
+      backLabelColor: props.backLabelColor,
       onEdit: () => props.onEditEntity(props.section, props.detail!),
       onDelete: () => props.onDeleteEntity(props.section, props.detail!.id),
       onNavigate: props.onNavigateEntity,
@@ -126,6 +132,7 @@ export default function AppPageRouter(props: AppPageRouterProps) {
       onEditEntity={props.onEditEntity}
       onDeleteEntity={props.onDeleteEntity}
       onAddEntity={props.onAddEntity}
+      onOpenProfile={props.onOpenProfile}
     />
   );
 }
