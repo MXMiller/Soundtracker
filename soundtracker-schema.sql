@@ -12,6 +12,7 @@ CREATE TABLE public.profiles (
     username VARCHAR(50) NOT NULL UNIQUE,
     email VARCHAR(254) NOT NULL UNIQUE,
     profile_image_file_path TEXT,
+    avatar_color TEXT,
     description TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()

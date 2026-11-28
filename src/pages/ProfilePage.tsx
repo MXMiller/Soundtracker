@@ -3,6 +3,7 @@ import { Check, KeyRound, Pencil, Save } from "lucide-react";
 import type { Soundtrack } from "../types";
 import type { UserProfile } from "../types/supabase";
 import { PageSearch, SoundtrackCard } from "../components/EntityCards";
+import { contrastingInk } from "../utils";
 
 export default function ProfilePage({
   profile,
@@ -19,7 +20,7 @@ export default function ProfilePage({
   profile: UserProfile;
   isOwnProfile: boolean;
   soundtracks: Soundtrack[];
-  onSave: (values: { username: string; description: string }) => Promise<void>;
+  onSave: (values: { username: string; description: string; avatarColor: string }) => Promise<void>;
   onRequestPasswordChange: () => Promise<string | null>;
   onOpenSoundtrack: (item: Soundtrack) => void;
   onFavorite: (item: Soundtrack) => void;
@@ -30,6 +31,7 @@ export default function ProfilePage({
   const [editing, setEditing] = useState(false);
   const [username, setUsername] = useState(profile.username);
   const [description, setDescription] = useState(profile.description || "");
+  const [avatarColor, setAvatarColor] = useState(profile.avatar_color || "");
   const [saved, setSaved] = useState(false);
   const [saveError, setSaveError] = useState("");
   const [passwordEmailSent, setPasswordEmailSent] = useState(false);
@@ -40,7 +42,7 @@ export default function ProfilePage({
     setBusy(true);
     setSaveError("");
     try {
-      await onSave({ username, description });
+      await onSave({ username, description, avatarColor });
     } catch (error) {
       setSaveError(error instanceof Error ? error.message : "Could not save profile.");
       setBusy(false);
@@ -73,7 +75,15 @@ export default function ProfilePage({
     <div className="content library-page profile-page">
       <div className="welcome-row profile-welcome-row">
         <div className="profile-heading">
-          <div className="avatar profile-avatar">{profile.username.slice(0, 2).toUpperCase()}</div>
+          <div
+            className="avatar profile-avatar"
+            style={profile.avatar_color ? {
+              backgroundColor: profile.avatar_color,
+              color: contrastingInk(profile.avatar_color),
+            } : undefined}
+          >
+            {profile.username.slice(0, 2).toUpperCase()}
+          </div>
           <div className="profile-heading-copy">
             <div className="eyebrow muted-eyebrow">SOUNDTRACKER PROFILE</div>
             <h1>{profile.username}</h1>
@@ -91,6 +101,7 @@ export default function ProfilePage({
         <form className="profile-edit-form" onSubmit={save}>
           <label className="field"><span>Username</span><input required minLength={3} maxLength={50} value={username} onChange={(event) => setUsername(event.target.value)} /></label>
           <label className="field"><span>About</span><textarea rows={3} value={description} onChange={(event) => setDescription(event.target.value)} /></label>
+          <label className="field"><span>Profile icon color</span><input type="color" value={avatarColor || "#d4c2a1"} onChange={(event) => setAvatarColor(event.target.value)} /></label>
           <div className="field profile-password-field">
             <span>Password</span>
             <div className="profile-password-action">

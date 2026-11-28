@@ -99,7 +99,6 @@ export function CollectionPage({
     <div className="content library-page">
       <div className="welcome-row">
         <div>
-          <div className="eyebrow muted-eyebrow">MONDAY, NOVEMBER 16</div>
           <h1>{copy.title}</h1>
           <p>{copy.description}</p>
         </div>

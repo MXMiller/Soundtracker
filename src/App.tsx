@@ -4,7 +4,6 @@ import {
   AudioLines,
   Check,
   ChevronRight,
-  CircleHelp,
   Globe2,
   Heart,
   Info,
@@ -34,6 +33,7 @@ import AppPageRouter from "./pages/AppPageRouter";
 import {
   getTrackMotifAppearances,
   parseMarkdown,
+  contrastingInk,
 } from "./utils";
 import AuthPage, { type AuthCredentials } from "./components/AuthPage";
 import ProfilePage from "./pages/ProfilePage";
@@ -61,6 +61,94 @@ type CreatedItemNotice = {
   soundtrackName: string;
 };
 const uid = () => `st-${Math.random().toString(36).slice(2, 9)}`;
+
+function normalizeSearchText(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function editDistance(first: string, second: string) {
+  const previous = Array.from({ length: second.length + 1 }, (_, index) => index);
+  for (let row = 1; row <= first.length; row += 1) {
+    const current = [row];
+    for (let column = 1; column <= second.length; column += 1) {
+      current[column] = Math.min(
+        current[column - 1] + 1,
+        previous[column] + 1,
+        previous[column - 1] + (first[row - 1] === second[column - 1] ? 0 : 1),
+      );
+    }
+    previous.splice(0, previous.length, ...current);
+  }
+  return previous[second.length];
+}
+
+function soundtrackSearchScore(soundtrack: Soundtrack, query: string) {
+  const normalizedQuery = normalizeSearchText(query);
+  if (!normalizedQuery) return 1;
+  const fields = [
+    { value: soundtrack.name, weight: 12 },
+    ...soundtrack.composers.map((value) => ({ value, weight: 9 })),
+    { value: soundtrack.ownerName, weight: 4 },
+    { value: soundtrack.description, weight: 2 },
+    ...soundtrack.storyItems.flatMap((item) => [
+      { value: item.name, weight: 7 },
+      { value: item.type, weight: 4 },
+      { value: item.description, weight: 2 },
+      { value: item.musicalKey, weight: 3 },
+      ...item.instruments.map((value) => ({ value, weight: 3 })),
+    ]),
+    ...soundtrack.leitmotifs.flatMap((item) => [
+      { value: item.name, weight: 7 },
+      { value: item.description, weight: 2 },
+    ]),
+    ...soundtrack.tracks.flatMap((item) => [
+      { value: item.name, weight: 8 },
+      { value: item.description, weight: 2 },
+      ...item.composers.map((value) => ({ value, weight: 6 })),
+    ]),
+  ].map((field) => ({ ...field, normalized: normalizeSearchText(field.value) }));
+
+  let score = 0;
+  fields.forEach((field) => {
+    if (!field.normalized) return;
+    if (field.normalized === normalizedQuery) score += field.weight * 5;
+    else if (field.normalized.startsWith(normalizedQuery)) score += field.weight * 3;
+    else if (field.normalized.includes(normalizedQuery)) score += field.weight * 2;
+  });
+
+  for (const term of normalizedQuery.split(" ").filter(Boolean)) {
+    let bestMatch = 0;
+    for (const field of fields) {
+      const words = field.normalized.split(" ").filter(Boolean);
+      for (const word of words) {
+        if (word === term) bestMatch = Math.max(bestMatch, field.weight * 1.5);
+        else if (word.startsWith(term)) bestMatch = Math.max(bestMatch, field.weight);
+        else if (term.length >= 4) {
+          const allowedDistance = term.length >= 7 ? 2 : 1;
+          if (Math.abs(word.length - term.length) <= allowedDistance) {
+            const distance = editDistance(term, word);
+            if (distance > 0 && distance <= allowedDistance) {
+              bestMatch = Math.max(bestMatch, field.weight * (distance === 1 ? 0.8 : 0.55));
+            }
+          }
+        }
+      }
+    }
+    if (bestMatch === 0) return 0;
+    score += bestMatch;
+  }
+  return score;
+}
+
+function profileAvatarStyle(color?: string | null): CSSProperties | undefined {
+  if (!color) return undefined;
+  return { backgroundColor: color, color: contrastingInk(color) };
+}
 
 function App() {
   const [soundtracks, setSoundtracks] = useState<Soundtrack[]>([]);
@@ -142,9 +230,9 @@ function App() {
     setDataReady(false);
     Promise.all([
       supabase.from("soundtracker_soundtrack_documents").select("id, owner_id, owner_name, name, visibility, library_order, payload, updated_at"),
-      supabase.from("public_profiles").select("id, username, description, profile_image_file_path"),
+      supabase.from("public_profiles").select("id, username, description, profile_image_file_path, avatar_color"),
       supabase.from("soundtracker_favorites").select("soundtrack_id").eq("user_id", userId),
-      supabase.from("profiles").select("id, username, description, profile_image_file_path").eq("id", userId).maybeSingle(),
+      supabase.from("profiles").select("id, username, description, profile_image_file_path, avatar_color").eq("id", userId).maybeSingle(),
       supabase.from("soundtracker_document_access").select("soundtrack_id, user_id, permission"),
       supabase.from("soundtracker_user_library_order").select("soundtrack_id, sort_order").eq("user_id", userId),
     ]).then(([docsResult, profilesResult, favoritesResult, ownProfileResult, accessResult, libraryOrderResult]) => {
@@ -268,6 +356,7 @@ function App() {
     username: currentUser.name,
     description: null,
     profile_image_file_path: null,
+    avatar_color: null,
   };
   const viewedProfile = profileViewId
     ? profiles.find((profile) => profile.id === profileViewId)
@@ -370,22 +459,25 @@ function App() {
   const canDelete = (item: Soundtrack) => mine(item);
   const visibleSoundtracks = useMemo(
     () => {
-      const matches = soundtracks
-        .filter((item) => {
+      const accessible = soundtracks.filter((item) => {
           if (page === "library")
             return mine(item) || Boolean(item.collaborators[currentUser.id]);
           if (page === "favorites") return favoriteIds.includes(item.id);
           if (page === "shared")
             return Boolean(item.collaborators[currentUser.id]) && !mine(item);
-          return !mine(item) && item.visibility !== "private";
-        })
-        .filter((item) =>
-          `${item.name} ${item.composers.join(" ")} ${item.ownerName}`
-            .toLowerCase()
-            .includes(query.toLowerCase()),
-        );
-      if (page !== "library") return matches;
-      return matches.sort((first, second) => {
+          return mine(item) || item.visibility !== "private";
+        });
+      const matches = accessible
+        .map((item) => ({ item, score: soundtrackSearchScore(item, query) }))
+        .filter((result) => result.score > 0);
+      if (page === "explore") {
+        return matches
+          .sort((first, second) => second.score - first.score)
+          .map((result) => result.item);
+      }
+      const filtered = matches.map((result) => result.item);
+      if (page !== "library") return filtered;
+      return filtered.sort((first, second) => {
         return (first.userLibraryOrder ?? first.libraryOrder ?? Number.MAX_SAFE_INTEGER)
           - (second.userLibraryOrder ?? second.libraryOrder ?? Number.MAX_SAFE_INTEGER);
       });
@@ -752,11 +844,11 @@ function App() {
     return error?.message || null;
   }
 
-  async function saveProfile(values: { username: string; description: string }) {
+  async function saveProfile(values: { username: string; description: string; avatarColor: string }) {
     const { data, error } = await supabase.from("profiles")
-      .update({ username: values.username.trim(), description: values.description.trim() || null })
+      .update({ username: values.username.trim(), description: values.description.trim() || null, avatar_color: values.avatarColor || null })
       .eq("id", currentUser.id)
-      .select("id, username, description, profile_image_file_path")
+      .select("id, username, description, profile_image_file_path, avatar_color")
       .single();
     if (error) {
       setAuthMessage(`Could not save profile: ${error.message}`);
@@ -964,14 +1056,9 @@ function App() {
           </button>
         </nav>
         <div className="sidebar-spacer" />
-        <div className="side-help">
-          <CircleHelp size={16} />
-          <span>Need a little help?</span>
-          <ChevronRight size={15} />
-        </div>
         <div className="account">
           <button className="account-profile" onClick={() => openProfile(currentUser.id)}>
-            <div className="avatar">{currentUser.name.slice(0, 2).toUpperCase()}</div>
+            <div className="avatar" style={profileAvatarStyle(currentProfile.avatar_color)}>{currentUser.name.slice(0, 2).toUpperCase()}</div>
             <span className="account-copy">
               <strong>{currentUser.name}</strong>
               <span>View profile</span>
@@ -986,7 +1073,7 @@ function App() {
 
       <main
         className={`main-area${active ? " has-active-soundtrack" : ""}`}
-        style={{ "--soundtrack-accent": active?.nameColor || "#9c4439" } as CSSProperties}
+        style={{ "--soundtrack-accent": active?.nameColor || "#292929" } as CSSProperties}
       >
         <header className="topbar">
           <button
@@ -1019,7 +1106,7 @@ function App() {
             })}
           </div>
           <div className="top-actions">
-            <button className="avatar top-avatar" title="View profile" onClick={() => openProfile(currentUser.id)}>
+            <button className="avatar top-avatar" style={profileAvatarStyle(currentProfile.avatar_color)} title="View profile" onClick={() => openProfile(currentUser.id)}>
               {currentUser.name.slice(0, 2).toUpperCase()}
             </button>
           </div>
@@ -1848,7 +1935,7 @@ function ModalView({
                 const key = person.id;
                 return (
                   <div className="share-person" key={person.id}>
-                    <div className={`avatar person-${i}`}>
+                    <div className={`avatar person-${i}`} style={profileAvatarStyle(person.avatar_color)}>
                       {person.username.slice(0, 2).toUpperCase()}
                     </div>
                     <div>

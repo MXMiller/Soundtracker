@@ -35,9 +35,12 @@ create policy "Users can update their own profile" on public.profiles
   with check (id = (select auth.uid()));
 
 -- This view exposes profile details without exposing email addresses.
+alter table public.profiles
+  add column if not exists avatar_color text;
+
 create or replace view public.public_profiles
 with (security_barrier = true)
-as select id, username, description, profile_image_file_path
+as select id, username, description, profile_image_file_path, avatar_color
 from public.profiles;
 grant select on public.public_profiles to authenticated;
 grant select, update on public.profiles to authenticated;

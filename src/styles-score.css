@@ -171,7 +171,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
   padding-bottom: 30px;
 }
 
-.welcome-row h1, .soundtrack-hero h1, .section-heading h2, .list-title h2,
+.welcome-row h1, .soundtrack-hero h1, .welcome-row h2, .section-heading h2, .list-title h2,
 .entity-name, .track-info, .empty-library h3, .empty-state h3,
 .modal-head h2, .entity-page-intro h1, .entity-info-section h2 {
   font-family: Georgia, "Times New Roman", serif;
@@ -179,12 +179,16 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
   letter-spacing: -.35px;
 }
 
-.welcome-row h1, .soundtrack-hero h1, .entity-page-intro h1 {
+.welcome-row h1, .soundtrack-hero h1, .entity-page-intro h1, .welcome-row h2 {
   font-weight: 500;
 }
 
 .welcome-row h1 {
   font-size: 36px;
+}
+
+.welcome-row h2 {
+  font-size: 24px;
 }
 
 .welcome-row p, .section-heading p, .hero-info>p {
@@ -894,6 +898,10 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
   font: inherit;
 }
 
+.profile-edit-form .field input[type="color"] {
+  width: 76px;
+}
+
 .password-input-wrap {
   position: relative;
 }
@@ -1014,46 +1022,6 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
   color: #252a31;
 }
 
-.about-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
-  margin-top: 18px;
-}
-
-.about-card {
-  padding: 22px;
-  border: 1px solid #d8d0c1;
-  background: #fffdf7;
-}
-
-.about-icon {
-  display: grid;
-  place-items: center;
-  width: 36px;
-  height: 36px;
-  border: 1px solid #bab2a4;
-  color: #353b42;
-}
-
-.about-card h3 {
-  margin: 16px 0 8px;
-  font-family: Georgia, serif;
-  font-size: 20px;
-}
-
-.about-card p {
-  margin: 0;
-  color: #555149;
-  line-height: 1.55;
-}
-
-@media (max-width: 740px) {
-  .about-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
 .music-staff-banner {
   position: relative;
   overflow: hidden;
@@ -1148,6 +1116,23 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .main-area.has-active-soundtrack .entity-page .entity-page-delete-button:hover,
 .main-area.has-active-soundtrack .entity-page .entity-page-delete-button svg {
   color: #555 !important;
+}
+
+.about-features h2 {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 25px;
+}
+
+.about-features p {
+  font-family: inherit;
+  font-size: 18px;
+  font-weight: 400;
+  line-height: 1.5;
+  letter-spacing: normal;
+}
+
+.about-page .about-features p {
+  font-family: inherit;
 }
 
 .main-area.has-active-soundtrack .lucide-arrow-left,
@@ -1295,7 +1280,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 }
 
 @media (max-width: 390px) {
-  .welcome-row h1 {
+  .welcome-row h1, .welcome-row h2 {
     font-size: 29px;
   }
 
