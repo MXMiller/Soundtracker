@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react";
 import {
   Bookmark,
-  ChevronDown,
   FileUp,
   Music2,
   Plus,
@@ -154,21 +153,15 @@ export function CollectionPage({
         </div>
         <div className={page === "library" ? "section-tools" : undefined}>
           <PageSearch page={page} query={query} onChange={onQueryChange} />
-          {page === "library" && (
-            <div className="sort-pill">
-              Recently updated <ChevronDown size={14} />
-            </div>
-          )}
         </div>
       </div>
 
       {visibleSoundtracks.length > 0 ? (
         <div className="library-grid">
-          {visibleSoundtracks.map((item, index) => (
+          {visibleSoundtracks.map((item) => (
             <SoundtrackCard
               key={item.id}
               item={item}
-              index={index}
               isMine={isMine(item)}
               isFavorite={favoriteIds.includes(item.id)}
               onOpen={() => onOpen(item)}

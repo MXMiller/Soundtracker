@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Check, Pencil, Save } from "lucide-react";
+import { Check, KeyRound, Pencil, Save } from "lucide-react";
 import type { Soundtrack } from "../types";
 import type { UserProfile } from "../types/supabase";
 import { PageSearch, SoundtrackCard } from "../components/EntityCards";
@@ -9,6 +9,7 @@ export default function ProfilePage({
   isOwnProfile,
   soundtracks,
   onSave,
+  onRequestPasswordChange,
   onOpenSoundtrack,
   onFavorite,
   favoriteIds,
@@ -19,6 +20,7 @@ export default function ProfilePage({
   isOwnProfile: boolean;
   soundtracks: Soundtrack[];
   onSave: (values: { username: string; description: string }) => Promise<void>;
+  onRequestPasswordChange: () => Promise<string | null>;
   onOpenSoundtrack: (item: Soundtrack) => void;
   onFavorite: (item: Soundtrack) => void;
   favoriteIds: string[];
@@ -30,6 +32,8 @@ export default function ProfilePage({
   const [description, setDescription] = useState(profile.description || "");
   const [saved, setSaved] = useState(false);
   const [saveError, setSaveError] = useState("");
+  const [passwordEmailSent, setPasswordEmailSent] = useState(false);
+  const [passwordBusy, setPasswordBusy] = useState(false);
   const [busy, setBusy] = useState(false);
   async function save(event: React.FormEvent) {
     event.preventDefault();
@@ -48,6 +52,23 @@ export default function ProfilePage({
     window.setTimeout(() => setSaved(false), 2000);
   }
 
+  async function requestPasswordChange() {
+    setPasswordBusy(true);
+    setSaveError("");
+    try {
+      const error = await onRequestPasswordChange();
+      if (error) {
+        setSaveError(error);
+        return;
+      }
+      setPasswordEmailSent(true);
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : "Could not send password change email.");
+    } finally {
+      setPasswordBusy(false);
+    }
+  }
+
   return (
     <div className="content library-page profile-page">
       <div className="welcome-row profile-welcome-row">
@@ -55,7 +76,7 @@ export default function ProfilePage({
           <div className="avatar profile-avatar">{profile.username.slice(0, 2).toUpperCase()}</div>
           <div className="profile-heading-copy">
             <div className="eyebrow muted-eyebrow">SOUNDTRACKER PROFILE</div>
-            <h1>{profile.username}{isOwnProfile ? "’s Library" : "’s Profile"}</h1>
+            <h1>{profile.username}</h1>
             <p>{profile.description || "A little space for all the music in this user's head."}</p>
           </div>
         </div>
@@ -68,9 +89,17 @@ export default function ProfilePage({
 
       {editing && (
         <form className="profile-edit-form" onSubmit={save}>
-          <div className="form-row">
-            <label className="field"><span>Username</span><input required minLength={3} maxLength={50} value={username} onChange={(event) => setUsername(event.target.value)} /></label>
-            <label className="field"><span>About</span><textarea rows={2} value={description} onChange={(event) => setDescription(event.target.value)} /></label>
+          <label className="field"><span>Username</span><input required minLength={3} maxLength={50} value={username} onChange={(event) => setUsername(event.target.value)} /></label>
+          <label className="field"><span>About</span><textarea rows={3} value={description} onChange={(event) => setDescription(event.target.value)} /></label>
+          <div className="field profile-password-field">
+            <span>Password</span>
+            <div className="profile-password-action">
+              <button type="button" className="button button-outline" onClick={requestPasswordChange} disabled={passwordBusy}>
+                <KeyRound size={15} /> {passwordBusy ? "Sending email…" : "Change password"}
+              </button>
+              {passwordEmailSent && <span className="password-email-sent" role="status">Password change email sent.</span>}
+            </div>
+            <small>We’ll email you a secure link to update your password.</small>
           </div>
           {saveError && <p className="form-error">{saveError}</p>}
           <div className="profile-actions"><button className="button button-primary" disabled={busy}><Save size={15} /> Save profile</button><button type="button" className="button button-outline" onClick={() => setEditing(false)}>Cancel</button></div>
@@ -88,7 +117,7 @@ export default function ProfilePage({
           : item.libraryOrder ?? Number.MAX_SAFE_INTEGER;
         const filtered = [...soundtracks].sort((first, second) => order(first) - order(second)).filter((item) => `${item.name} ${item.composers.join(" ")}`.toLowerCase().includes(query.toLowerCase()));
         return filtered.length ? (
-          <div className="library-grid">{filtered.map((item, index) => <SoundtrackCard key={item.id} item={item} index={index} isMine={isOwnProfile} isFavorite={favoriteIds.includes(item.id)} onOpen={() => onOpenSoundtrack(item)} onFavorite={() => onFavorite(item)} />)}</div>
+          <div className="library-grid">{filtered.map((item) => <SoundtrackCard key={item.id} item={item} isMine={isOwnProfile} isFavorite={favoriteIds.includes(item.id)} onOpen={() => onOpenSoundtrack(item)} onFavorite={() => onFavorite(item)} />)}</div>
         ) : (
           <div className="empty-library"><h3>{query ? "Nothing matched your search" : "No soundtracks to show"}</h3><p>{query ? "Try another title or composer." : isOwnProfile ? "Soundtracks you create will appear here." : "This user has no public soundtracks yet."}</p></div>
         );

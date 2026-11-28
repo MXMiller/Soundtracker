@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { AudioLines, ArrowRight } from "lucide-react";
+import { AudioLines, ArrowRight, Eye } from "lucide-react";
 
 export interface AuthCredentials {
   email: string;
@@ -17,6 +17,7 @@ export default function AuthPage({
   const [mode, setMode] = useState<"login" | "signup">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [passwordVisible, setPasswordVisible] = useState(false);
   const [username, setUsername] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
@@ -45,7 +46,29 @@ export default function AuthPage({
           <label className="field"><span>Username</span><input required minLength={3} maxLength={50} value={username} onChange={(event) => setUsername(event.target.value)} autoComplete="username" /></label>
         )}
         <label className="field"><span>Email</span><input required type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" /></label>
-        <label className="field"><span>Password</span><input required type="password" minLength={6} value={password} onChange={(event) => setPassword(event.target.value)} autoComplete={mode === "login" ? "current-password" : "new-password"} /></label>
+        <label className="field">
+          <span>Password</span>
+          <div className="password-input-wrap">
+            <input required type={mode === "signup" && passwordVisible ? "text" : "password"} minLength={6} value={password} onChange={(event) => setPassword(event.target.value)} autoComplete={mode === "login" ? "current-password" : "new-password"} />
+            {mode === "signup" && (
+              <button
+                type="button"
+                className="password-hold-button"
+                aria-label="Hold to show password"
+                title="Hold to show password"
+                onPointerDown={(event) => { event.preventDefault(); setPasswordVisible(true); }}
+                onPointerUp={() => setPasswordVisible(false)}
+                onPointerLeave={() => setPasswordVisible(false)}
+                onPointerCancel={() => setPasswordVisible(false)}
+                onKeyDown={(event) => { if (event.key === " " || event.key === "Enter") setPasswordVisible(true); }}
+                onKeyUp={(event) => { if (event.key === " " || event.key === "Enter") setPasswordVisible(false); }}
+                onBlur={() => setPasswordVisible(false)}
+              >
+                <Eye size={16} />
+              </button>
+            )}
+          </div>
+        </label>
         {message && <p className="auth-message" role="status">{message}</p>}
         <button className="button button-primary auth-submit" disabled={busy}>
           {busy ? "Please wait…" : mode === "login" ? "Sign in" : "Create account"}<ArrowRight size={16} />

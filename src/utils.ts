@@ -3,6 +3,21 @@ import type { Soundtrack, TrackMotif, TrackMotifAppearance } from "./types";
 
 export const STORE_KEY = "soundtracker-local-v1";
 
+function colorLuminance(color: string): number {
+  const hex = color.trim().replace(/^#/, "");
+  if (!/^(?:[\da-f]{3}|[\da-f]{6})$/i.test(hex)) return 0.18;
+  const expanded = hex.length === 3 ? [...hex].map((part) => part + part).join("") : hex;
+  const [red, green, blue] = [0, 2, 4].map((offset) => {
+    const channel = parseInt(expanded.slice(offset, offset + 2), 16) / 255;
+    return channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
+}
+
+export function contrastingInk(color: string): string {
+  return colorLuminance(color) > 0.179 ? "#111111" : "#ffffff";
+}
+
 export function getTrackMotifAppearances(
   connection: TrackMotif,
 ): TrackMotifAppearance[] {

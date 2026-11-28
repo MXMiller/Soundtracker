@@ -12,6 +12,7 @@ import {
   Trash2,
   X,
 } from "lucide-react";
+import type { CSSProperties } from "react";
 import type {
   Leitmotif,
   Soundtrack,
@@ -20,6 +21,7 @@ import type {
   Track,
   ViewPage,
 } from "../types";
+import { contrastingInk } from "../utils";
 import { niceDate } from "../utils";
 import { Fragment } from "react";
 type Entity = SoundtrackEntity;
@@ -66,7 +68,6 @@ export function PageSearch({
 
 export function SoundtrackCard({
   item,
-  index,
   isMine,
   isFavorite,
   onOpen,
@@ -81,7 +82,6 @@ export function SoundtrackCard({
   onDragEnd,
 }: {
   item: Soundtrack;
-  index: number;
   isMine: boolean;
   isFavorite: boolean;
   onOpen: () => void;
@@ -95,6 +95,7 @@ export function SoundtrackCard({
   onDrop?: (event: React.DragEvent<HTMLElement>) => void;
   onDragEnd?: () => void;
 }) {
+  const bannerColor = item.nameColor || "#292929";
   return (
     <article
       className={`soundtrack-card${isDragging ? " is-dragging" : ""}${isDropTarget ? " is-drop-target" : ""}`}
@@ -105,33 +106,15 @@ export function SoundtrackCard({
       onDragEnd={onDragEnd}
       title={canReorder ? "Drag to reorder your soundtracks" : undefined}
     >
-      <button className={`card-cover cover-${index % 4}`} onClick={onOpen}>
-        <div className="cover-pattern">
-          <div />
-          <div />
-          <div />
-        </div>
-        <span className="cover-small">
-          <AudioLines size={17} /> SOUNDTRACK&nbsp; / &nbsp;0{index + 1}
-        </span>
-        <span className="cover-title" style={{ color: item.nameColor }}>{item.name}</span>
-        <span className="cover-waves">
-          <i />
-          <i />
-          <i />
-          <i />
-          <i />
-          <i />
-          <i />
-          <i />
-          <i />
-          <i />
-          <i />
-          <i />
-          <i />
-          <i />
-          <i />
-        </span>
+      <button
+        className="card-cover music-staff-banner"
+        style={{
+          "--staff-background": bannerColor,
+          "--staff-line": contrastingInk(bannerColor),
+        } as CSSProperties}
+        onClick={onOpen}
+      >
+        <span className="cover-title" style={{ color: contrastingInk(bannerColor) }}>{item.name}</span>
       </button>
       <div className="card-main">
         <div className="card-topline">
@@ -203,17 +186,10 @@ export function StoryCard({
   onDrop?: (event: React.DragEvent<HTMLElement>) => void;
   onDragEnd?: () => void;
 }) {
-  const color =
-    item.type === "Character"
-      ? "coral"
-      : item.type === "Setting"
-        ? "blue"
-        : item.type === "Idea"
-          ? "gold"
-          : "sage";
   return (
     <article
       className={`entity-card${isDragging ? " is-dragging" : ""}${isDropTarget ? " is-drop-target" : ""}`}
+      style={{ "--entity-hover-color": item.nameColor || "#292929" } as CSSProperties}
       onClick={onOpen}
       draggable={canReorder}
       onDragStart={onDragStart}
@@ -222,9 +198,13 @@ export function StoryCard({
       onDragEnd={onDragEnd}
       title={canReorder ? "Drag to reorder story items" : undefined}
     >
-      <div className={`entity-art ${color}`}>
-        <div className="art-ring" />
-      </div>
+      <div
+        className="entity-art music-staff-banner"
+        style={{
+          "--staff-background": item.nameColor || "#292929",
+          "--staff-line": contrastingInk(item.nameColor || "#292929"),
+        } as CSSProperties}
+      />
       <div className="entity-body">
         <div className="entity-card-top">
           <span className="type-label">{item.type}</span>
@@ -307,6 +287,7 @@ export function MotifCard({
   return (
     <article
       className={`entity-card motif-card${isDragging ? " is-dragging" : ""}${isDropTarget ? " is-drop-target" : ""}`}
+      style={{ "--entity-hover-color": item.nameColor || "#292929" } as CSSProperties}
       onClick={onOpen}
       draggable={canReorder}
       onDragStart={onDragStart}
@@ -315,22 +296,12 @@ export function MotifCard({
       onDragEnd={onDragEnd}
       title={canReorder ? "Drag to reorder leitmotifs" : undefined}
     >
-      <div className="motif-visual">
-        <div className="note-lines">
-          <i />
-          <i />
-          <i />
-          <i />
-          <i />
-        </div>
-        <div className="notes">
-          <span>♪</span>
-          <span>♩</span>
-          <span>♫</span>
-          <span>♬</span>
-          <span>♪</span>
-        </div>
-      </div>
+      <div
+        className="motif-visual music-staff-banner"
+        style={{
+          "--staff-line": item.nameColor || "#292929",
+        } as CSSProperties}
+      />
       <div className="entity-body">
         <div className="entity-card-top">
           <span className="type-label motif-label">LEITMOTIF</span>
@@ -540,7 +511,14 @@ export function RelatedBlock({
       {rows.length ? (
         <div className="related-pills">
           {rows.map((row) => (
-            <button key={row.id} onClick={() => onClick(row)} style={{ color: row.nameColor }}>
+            <button
+              key={row.id}
+              onClick={() => onClick(row)}
+              style={{
+                color: row.nameColor || "#292929",
+                "--related-item-color": row.nameColor || "#292929",
+              } as CSSProperties}
+            >
               {icon}
               {row.name}
               <ChevronRight size={13} />

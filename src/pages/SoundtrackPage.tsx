@@ -13,8 +13,9 @@ import {
   Share2,
   Trash2,
 } from "lucide-react";
+import type { CSSProperties } from "react";
 import type { Soundtrack, SoundtrackEntity, SoundtrackSection } from "../types";
-import { niceDate, exportMarkdown } from "../utils";
+import { contrastingInk, niceDate, exportMarkdown } from "../utils";
 import StoryItemsPage from "./StoryItemsPage";
 import LeitmotifsPage from "./LeitmotifsPage";
 import TracksPage from "./TracksPage";
@@ -98,7 +99,13 @@ export default function SoundtrackPage({
       </button>
 
       <section className="soundtrack-hero">
-        <div className="hero-art">
+        <div
+          className="hero-art"
+          style={{
+            "--staff-background": soundtrack.nameColor || "#292929",
+            "--staff-line": contrastingInk(soundtrack.nameColor || "#292929"),
+          } as CSSProperties}
+        >
           <div className="orb orb-one" />
           <div className="orb orb-two" />
           <div className="hero-lines" />

@@ -1,4 +1,4 @@
-import { isValidElement, useEffect, useMemo, useRef, useState } from "react";
+import { isValidElement, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import {
   ArrowRight,
   AudioLines,
@@ -7,6 +7,7 @@ import {
   CircleHelp,
   Globe2,
   Heart,
+  Info,
   Layers3,
   LogOut,
   Menu,
@@ -36,6 +37,8 @@ import {
 } from "./utils";
 import AuthPage, { type AuthCredentials } from "./components/AuthPage";
 import ProfilePage from "./pages/ProfilePage";
+import AboutPage from "./pages/AboutPage";
+import PasswordChangePage from "./pages/PasswordChangePage";
 import { supabase } from "./lib/supabase";
 import type { UserProfile } from "./types/supabase";
 import type { Session } from "@supabase/supabase-js";
@@ -68,6 +71,8 @@ function App() {
   const [profiles, setProfiles] = useState<UserProfile[]>([]);
   const [profileViewId, setProfileViewId] = useState<string | null>(null);
   const [profileReturnId, setProfileReturnId] = useState<string | null>(null);
+  const [aboutOpen, setAboutOpen] = useState(false);
+  const [passwordRecovery, setPasswordRecovery] = useState(false);
   const [profileQuery, setProfileQuery] = useState("");
   const [page, setPage] = useState<Page>("library");
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -115,10 +120,11 @@ function App() {
         setAuthReady(true);
       }
     });
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, nextSession) => {
       setSession(nextSession);
       setAuthReady(true);
       setProfileViewId(null);
+      if (event === "PASSWORD_RECOVERY") setPasswordRecovery(true);
     });
     return () => { cancelled = true; subscription.unsubscribe(); };
   }, []);
@@ -342,6 +348,8 @@ function App() {
         target: "current",
       });
     }
+  } else if (aboutOpen) {
+    breadcrumbItems.push({ label: "About", kind: "current", target: "current" });
   } else if (profileViewId && viewedProfile) {
     breadcrumbItems.push({
       label: `${viewedProfile.username}'s profile`,
@@ -757,6 +765,27 @@ function App() {
     setProfiles((all) => all.map((profile) => profile.id === currentUser.id ? data as UserProfile : profile));
     setSoundtracks((all) => all.map((item) => item.ownerId === currentUser.id ? { ...item, ownerName: values.username.trim() } : item));
   }
+
+  async function requestPasswordChange() {
+    const email = session?.user.email;
+    if (!email) return "Could not find the email address for this account.";
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin,
+    });
+    return error?.message || null;
+  }
+
+  async function verifyCurrentPassword(password: string) {
+    const email = session?.user.email;
+    if (!email) return "Could not find the email address for this account.";
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    return error?.message || null;
+  }
+
+  async function saveNewPassword(password: string) {
+    const { error } = await supabase.auth.updateUser({ password });
+    return error?.message || null;
+  }
   function editCurrentEntity(kind: Section, entity: Entity) {
     openModal(
       kind === "story" ? "story" : kind === "motifs" ? "motif" : "track",
@@ -838,6 +867,7 @@ function App() {
   }
 
   function openProfile(userId: string) {
+    setAboutOpen(false);
     setProfileReturnId(null);
     setProfileViewId(userId);
     setPage(userId === currentUser.id ? "library" : "explore");
@@ -848,6 +878,7 @@ function App() {
   }
 
   function openWorkspacePage(nextPage: Page) {
+    setAboutOpen(false);
     setProfileViewId(null);
     setProfileReturnId(null);
     setPage(nextPage);
@@ -857,7 +888,22 @@ function App() {
     setMobileNav(false);
   }
 
+  function openAboutPage() {
+    setAboutOpen(true);
+    setProfileViewId(null);
+    setProfileReturnId(null);
+    setActiveId(null);
+    setDetail(null);
+    setDetailHistory([]);
+    setMobileNav(false);
+  }
+
   if (!authReady) return <div className="auth-screen"><div className="auth-card">Connecting to Soundtracker…</div></div>;
+  if (passwordRecovery) return <PasswordChangePage
+    onVerifyCurrentPassword={verifyCurrentPassword}
+    onSaveNewPassword={saveNewPassword}
+    onComplete={() => setPasswordRecovery(false)}
+  />;
   if (!session) return <AuthPage onSignIn={signIn} onSignUp={signUp} />;
 
   return (
@@ -887,7 +933,7 @@ function App() {
         <div className="nav-label">WORKSPACE</div>
         <nav className="side-nav">
           <button
-            className={page === "library" && !active && !profileViewId ? "selected" : ""}
+            className={page === "library" && !active && !profileViewId && !aboutOpen ? "selected" : ""}
             onClick={() => openWorkspacePage("library")}
           >
             <Layers3 size={17} /> My library{" "}
@@ -896,22 +942,25 @@ function App() {
             </span>
           </button>
           <button
-            className={page === "explore" && !profileViewId ? "selected" : ""}
+            className={page === "explore" && !profileViewId && !aboutOpen ? "selected" : ""}
             onClick={() => openWorkspacePage("explore")}
           >
             <Globe2 size={17} /> Explore
           </button>
           <button
-            className={page === "favorites" && !profileViewId ? "selected" : ""}
+            className={page === "favorites" && !profileViewId && !aboutOpen ? "selected" : ""}
             onClick={() => openWorkspacePage("favorites")}
           >
             <Heart size={17} /> Favorites
           </button>
           <button
-            className={page === "shared" && !profileViewId ? "selected" : ""}
+            className={page === "shared" && !profileViewId && !aboutOpen ? "selected" : ""}
             onClick={() => openWorkspacePage("shared")}
           >
             <Share2 size={17} /> Shared with me
+          </button>
+          <button className={aboutOpen ? "selected" : ""} onClick={openAboutPage}>
+            <Info size={17} /> About
           </button>
         </nav>
         <div className="sidebar-spacer" />
@@ -928,13 +977,17 @@ function App() {
               <span>View profile</span>
             </span>
           </button>
-          <button className="icon-button" aria-label="Log out" title="Log out" onClick={() => supabase.auth.signOut()}>
+          <button className="logout-button" aria-label="Log out" title="Log out" onClick={() => supabase.auth.signOut()}>
             <LogOut size={17} />
+            <span>Log out</span>
           </button>
         </div>
       </aside>
 
-      <main className="main-area">
+      <main
+        className={`main-area${active ? " has-active-soundtrack" : ""}`}
+        style={{ "--soundtrack-accent": active?.nameColor || "#9c4439" } as CSSProperties}
+      >
         <header className="topbar">
           <button
             className="mobile-menu icon-button"
@@ -972,7 +1025,7 @@ function App() {
           </div>
         </header>
 
-        {profileViewId ? viewedProfile ? (
+        {aboutOpen ? <AboutPage /> : profileViewId ? viewedProfile ? (
           <ProfilePage
             profile={viewedProfile}
             isOwnProfile={profileViewId === currentUser.id}
@@ -980,6 +1033,7 @@ function App() {
             query={profileQuery}
             onQueryChange={setProfileQuery}
             onSave={saveProfile}
+            onRequestPasswordChange={requestPasswordChange}
             onOpenSoundtrack={(item) => {
               setProfileReturnId(profileViewId);
               setProfileViewId(null);
@@ -1345,6 +1399,40 @@ function ModalView({
   );
   const [error, setError] = useState("");
   const fileInput = useRef<HTMLInputElement>(null);
+  const paletteSoundtrack = modal === "soundtrack" ? soundtrackEditing : active;
+  const colorUses = paletteSoundtrack
+    ? [
+        {
+          name: `Soundtrack: ${paletteSoundtrack.name}`,
+          color: modal === "soundtrack" ? nameColor : paletteSoundtrack.nameColor,
+        },
+        ...paletteSoundtrack.storyItems.map((item) => ({
+          name: `Story item: ${item.name}`,
+          color: item.nameColor,
+        })),
+        ...paletteSoundtrack.leitmotifs.map((item) => ({
+          name: `Leitmotif: ${item.name}`,
+          color: item.nameColor,
+        })),
+        ...paletteSoundtrack.tracks.map((item) => ({
+          name: `Track: ${item.name}`,
+          color: item.nameColor,
+        })),
+      ]
+    : [];
+  const usedColorMap = new Map<string, string[]>();
+  colorUses.forEach(({ name: colorName, color }) => {
+    if (!color) return;
+    const normalized = color.toLowerCase();
+    usedColorMap.set(normalized, [
+      ...(usedColorMap.get(normalized) || []),
+      colorName,
+    ]);
+  });
+  const usedColors = Array.from(usedColorMap, ([color, names]) => ({
+    color,
+    names,
+  }));
   const submit = (event: React.FormEvent) => {
     event.preventDefault();
     setError("");
@@ -1495,7 +1583,7 @@ function ModalView({
                 />
               </Field>
               <Field label="Name color">
-                <input type="color" value={nameColor || "#222222"} onChange={(e) => setNameColor(e.target.value)} />
+                <ColorPicker value={nameColor || "#222222"} onChange={setNameColor} usedColors={usedColors} />
               </Field>
               <Field label="Composer(s)" hint="Separate names with commas">
                 <input
@@ -1545,7 +1633,7 @@ function ModalView({
                 />
               </Field>
               <Field label="Name color">
-                <input type="color" value={nameColor || "#222222"} onChange={(e) => setNameColor(e.target.value)} />
+                <ColorPicker value={nameColor || "#222222"} onChange={setNameColor} usedColors={usedColors} />
               </Field>
               <Field label="Type">
                 <select
@@ -1630,7 +1718,7 @@ function ModalView({
                 />
               </Field>
               <Field label="Name color">
-                <input type="color" value={nameColor || "#222222"} onChange={(e) => setNameColor(e.target.value)} />
+                <ColorPicker value={nameColor || "#222222"} onChange={setNameColor} usedColors={usedColors} />
               </Field>
               <Field label="Description">
                 <textarea
@@ -1695,7 +1783,7 @@ function ModalView({
                 />
               </Field>
               <Field label="Name color">
-                <input type="color" value={nameColor || "#222222"} onChange={(e) => setNameColor(e.target.value)} />
+                <ColorPicker value={nameColor || "#222222"} onChange={setNameColor} usedColors={usedColors} />
               </Field>
               <div className="form-row">
                 <Field label="Track number">
@@ -1840,6 +1928,92 @@ function ModalView({
           </div>
         </form>
       </div>
+    </div>
+  );
+}
+
+function nativeColorValue(value: string): string {
+  const hex = value.trim();
+  if (/^#[\da-f]{6}$/i.test(hex)) return hex;
+  if (/^#[\da-f]{3}$/i.test(hex)) {
+    return `#${[...hex.slice(1)].map((channel) => channel + channel).join("")}`;
+  }
+  if (/^#[\da-f]{8}$/i.test(hex)) return hex.slice(0, 7);
+  if (!CSS.supports("color", hex)) return "#222222";
+  const context = document.createElement("canvas").getContext("2d");
+  if (!context) return "#222222";
+  context.fillStyle = hex;
+  const normalized = context.fillStyle;
+  if (/^#[\da-f]{6}$/i.test(normalized)) return normalized;
+  if (/^#[\da-f]{3}$/i.test(normalized)) {
+    return `#${[...normalized.slice(1)].map((channel) => channel + channel).join("")}`;
+  }
+  const channels = normalized.match(/[\d.]+/g);
+  if (!channels || channels.length < 3) return "#222222";
+  return `#${channels.slice(0, 3).map((channel) => Math.round(Number(channel)).toString(16).padStart(2, "0")).join("")}`;
+}
+
+function ColorPicker({
+  value,
+  onChange,
+  usedColors,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  usedColors: { color: string; names: string[] }[];
+}) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="custom-color-picker">
+      <button
+        type="button"
+        className="color-picker-trigger"
+        aria-expanded={open}
+        onClick={() => setOpen((current) => !current)}
+      >
+        <span className="color-picker-swatch" style={{ backgroundColor: value }} />
+        <span>{value.toUpperCase()}</span>
+        <span className="color-picker-trigger-label">{open ? "Close" : "Choose color"}</span>
+      </button>
+      {open && (
+        <div className="color-picker-popover">
+          <label className="color-picker-custom">
+            <span>Custom color</span>
+            <input
+              type="color"
+              value={nativeColorValue(value)}
+              onChange={(event) => onChange(event.target.value)}
+              aria-label="Choose a custom color"
+            />
+          </label>
+          <section className="color-picker-used-colors">
+            <h3>Colors in this soundtrack</h3>
+            {usedColors.length ? (
+              <div className="color-picker-palette">
+                {usedColors.map(({ color, names }) => (
+                  <button
+                    type="button"
+                    className="color-picker-option"
+                    key={color}
+                    title={`${color.toUpperCase()} — ${names.join(", ")}`}
+                    onClick={() => onChange(color)}
+                  >
+                    <span className="color-picker-swatch" style={{ backgroundColor: color }} />
+                    <span className="color-picker-option-copy">
+                      <strong>{names[0]}</strong>
+                      {names.length > 1 && <small>{names.slice(1).join(", ")}</small>}
+                    </span>
+                    <code>{color.toUpperCase()}</code>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <p>No custom colors are used in this soundtrack yet.</p>
+            )}
+          </section>
+        </div>
+      )}
     </div>
   );
 }

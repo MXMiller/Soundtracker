@@ -8,6 +8,7 @@ import {
   Pencil,
   Trash2,
 } from "lucide-react";
+import type { CSSProperties } from "react";
 import type {
   Soundtrack,
   SoundtrackEntity,
@@ -90,8 +91,14 @@ export function EntityDetailContent({
         motif.derivedFromIds.includes(entity.id),
       )
     : [];
+  const entityAccent = isStory || isMotif
+    ? entity.nameColor || "#292929"
+    : active.nameColor || "#292929";
   return (
-    <div className="content entity-page">
+    <div
+      className="content entity-page"
+      style={{ "--entity-accent": entityAccent } as CSSProperties}
+    >
       <button className="back-link" onClick={onBack}>
         <ArrowLeft size={15} /> Back to <span style={{ color: backLabelColor }}>{backLabel}</span>
       </button>
@@ -120,7 +127,7 @@ export function EntityDetailContent({
               Edit page
             </button>
             <button
-              className="icon-button"
+              className="icon-button entity-page-delete-button"
               onClick={onDelete}
               aria-label="Delete page"
             >
@@ -220,14 +227,14 @@ export function EntityDetailContent({
               title="References"
               empty="This motif is an original theme"
               rows={linkedParents}
-              icon={<ArrowRight size={15} />}
+              icon={<AudioLines size={15} />}
               onClick={onNavigate}
             />
             <RelatedBlock
               title="Referenced by"
               empty="No other leitmotifs are derived from this one yet"
               rows={linkedChildren}
-              icon={<ArrowRight size={15} />}
+              icon={<AudioLines size={15} />}
               onClick={onNavigate}
             />
             <RelatedBlock
@@ -272,6 +279,7 @@ export function EntityDetailContent({
                       >
                         <button
                           className="track-connection-link"
+                          style={{ "--related-item-color": motif.nameColor || "#292929" } as CSSProperties}
                           onClick={() => onNavigate(motif)}
                         >
                           <AudioLines size={15} />
