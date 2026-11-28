@@ -21,7 +21,7 @@ import type {
   Track,
   ViewPage,
 } from "../types";
-import { contrastingInk } from "../utils";
+import { contrastingInk, contrastingStaffLine } from "../utils";
 import { niceDate } from "../utils";
 import { Fragment } from "react";
 type Entity = SoundtrackEntity;
@@ -202,7 +202,7 @@ export function StoryCard({
         className="entity-art music-staff-banner"
         style={{
           "--staff-background": item.nameColor || "#292929",
-          "--staff-line": contrastingInk(item.nameColor || "#292929"),
+          "--staff-line": contrastingStaffLine(item.nameColor || "#292929"),
         } as CSSProperties}
       />
       <div className="entity-body">

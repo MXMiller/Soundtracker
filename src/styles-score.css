@@ -467,7 +467,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 
 .hero-composers {
   font-family: "Courier New", monospace;
-  font-size: 10px;
+  font-size: 16px;
 }
 
 .hero-meta svg {
@@ -1135,6 +1135,11 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
   font-family: inherit;
 }
 
+#root p {
+  font-size: 24px !important;
+  line-height: 1.35 !important;
+}
+
 .main-area.has-active-soundtrack .lucide-arrow-left,
 .main-area.has-active-soundtrack .lucide-arrow-right,
 .main-area.has-active-soundtrack .lucide-chevron-left,
@@ -1779,8 +1784,12 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .modal-intro,
 .field-note,
 .detail-empty {
-  font-size: 18px;
-  line-height: 1.18;
+  font-size: 24px;
+  line-height: 1.2;
+}
+
+.hero-info>p {
+  font-size: 20px !important;
 }
 
 .card-description {
@@ -1913,7 +1922,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
   padding: 0 8px 0 0;
   color: #333;
   font-family: var(--handwriting);
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 500;
   line-height: 1.15;
   text-align: left;
@@ -1947,7 +1956,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
   overflow: hidden;
   color: #333;
   font-family: var(--handwriting);
-  font-size: 17px;
+  font-size: 20px;
   line-height: 1.05;
   text-overflow: ellipsis;
   white-space: nowrap;

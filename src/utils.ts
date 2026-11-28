@@ -18,6 +18,10 @@ export function contrastingInk(color: string): string {
   return colorLuminance(color) > 0.179 ? "#111111" : "#ffffff";
 }
 
+export function contrastingStaffLine(color: string): string {
+  return colorLuminance(color) > 0.82 ? "#111111" : "#ffffff";
+}
+
 export function getTrackMotifAppearances(
   connection: TrackMotif,
 ): TrackMotifAppearance[] {
